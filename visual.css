@@ -1,0 +1,55 @@
+.Visual-workspace {
+  background: #eee;
+  cursor: default;
+}
+
+body.Visual-workspace {
+  height: 100%;
+  margin: 0;
+}
+
+.Visual-script {
+  padding-top: 3px;
+  max-width: 600px;
+}
+
+.Visual-absolute-script {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.Visual-block {
+  position: relative;
+  line-height: 1px;
+}
+
+.Visual-command {
+  display: block;
+  float: left;
+  clear: both;
+  margin-top: -3px;
+  padding: 3px 5px;
+}
+
+.Visual-puzzled {
+  padding-bottom: 6px;
+}
+
+.Visual-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.Visual-part {
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+  margin: 0 2px;
+}
+
+.Visual-label {
+  font: 500 12px/15px Helvetica Neue, Helvetica, Arial, sans-serif;
+  color: #fff;
+}
