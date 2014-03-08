@@ -14,7 +14,7 @@ function Visual(options) {
 
   function el(tagName, className) {
     var d = document.createElement(className ? tagName : 'div');
-    d.className = className || tagName;
+    d.className = className || tagName || '';
     return d;
   }
 
@@ -24,6 +24,39 @@ function Visual(options) {
     el.style.MSTransform =
     el.style.OTransform =
     el.style.transform = transform;
+  }
+
+  function bezel(context, path, thisArg, inset, insetColor) {
+    var s = inset ? -1 : 1;
+    var w = context.canvas.width;
+    var h = context.canvas.height;
+
+    context.beginPath();
+    path.call(thisArg, context);
+    context.fill();
+
+    context.beginPath();
+    context.moveTo(-3, -3);
+    context.lineTo(-3, h+3);
+    context.lineTo(w+3, h+3);
+    context.lineTo(w+3, -3);
+    context.closePath();
+    path.call(thisArg, context);
+
+    if (insetColor) context.fillStyle = insetColor;
+    context.globalCompositeOperation = 'source-atop';
+
+    context.shadowOffsetX = s * 1;
+    context.shadowOffsetY = s * 1;
+    context.shadowBlur = 1;
+    context.shadowColor = 'rgba(255, 255, 255, .4)';
+    context.fill();
+
+    context.shadowOffsetX = s * -1;
+    context.shadowOffsetY = s * -1;
+    context.shadowBlur = 1;
+    context.shadowColor = 'rgba(0, 0, 0, .4)';
+    context.fill();
   }
 
 
@@ -44,6 +77,15 @@ function Visual(options) {
   var PI32 = Math.PI * 3/2;
 
   Block.prototype = {
+    constructor: Block,
+
+    blockClasses: {
+      c: 'Visual-command Visual-puzzled Visual-block',
+      f: 'Visual-command Visual-block',
+      r: 'Visual-part Visual-block',
+      b: 'Visual-part Visual-block'
+    },
+
     isArg: false,
     isBlock: true,
     isScript: false,
@@ -51,49 +93,42 @@ function Visual(options) {
 
     parent: null,
 
-    blockClasses: {
-      ' ': 'Visual-command Visual-puzzled Visual-block',
-      'f': 'Visual-command Visual-block',
-      'r': 'Visual-part Visual-block',
-      'b': 'Visual-part Visual-block'
-    },
-
     radius: 4,
     puzzle: 3,
     puzzleWidth: 10,
     puzzleInset: 12,
 
-    drawBlockType: {
-      ' ': function() {
-        this.drawCommandShape(true);
+    pathBlockType: {
+      c: function(context) {
+        this.pathCommandShape(true, context);
       },
-      'f': function() {
-        this.drawCommandShape(false);
+      f: function(context) {
+        this.pathCommandShape(false, context);
       }
     },
 
-    drawCommandShape: function(bottom) {
+    pathCommandShape: function(bottom, context) {
       var r = this.radius;
       var p = this.puzzle;
       var pi = this.puzzleInset;
       var pw = this.puzzleWidth;
       var w = this.width;
       var h = this.height - bottom * p;
-      this.context.moveTo(0, r);
-      this.context.arc(r, r, r, PI, PI32, false);
-      this.context.lineTo(pi, 0);
-      this.context.lineTo(pi + p, p);
-      this.context.lineTo(pi + pw + p, p);
-      this.context.lineTo(pi + pw + p * 2, 0);
-      this.context.arc(w - r, r, r, PI32, 0, false);
-      this.context.arc(w - r, h - r, r, 0, PI12, false);
+      context.moveTo(0, r);
+      context.arc(r, r, r, PI, PI32, false);
+      context.lineTo(pi, 0);
+      context.lineTo(pi + p, p);
+      context.lineTo(pi + pw + p, p);
+      context.lineTo(pi + pw + p * 2, 0);
+      context.arc(w - r, r, r, PI32, 0, false);
+      context.arc(w - r, h - r, r, 0, PI12, false);
       if (bottom) {
-        this.context.lineTo(pi + pw + p * 2, h);
-        this.context.lineTo(pi + pw + p, h + p);
-        this.context.lineTo(pi + p, h + p);
-        this.context.lineTo(pi, h);
+        context.lineTo(pi + pw + p * 2, h);
+        context.lineTo(pi + pw + p, h + p);
+        context.lineTo(pi + p, h + p);
+        context.lineTo(pi, h);
       }
-      this.context.arc(r, h - r, r, PI12, PI, false);
+      context.arc(r, h - r, r, PI12, PI, false);
     },
 
     get spec() {return this._spec},
@@ -135,7 +170,9 @@ function Visual(options) {
     get workspace() {return this.parent && this.parent.workspace},
 
     add: function(part) {
+      part.parent = this;
       this.parts.push(part);
+
       if (part.isBlock || part.isArg) {
         this.args.push(part);
       } else {
@@ -163,45 +200,18 @@ function Visual(options) {
 
     layoutSelf: function() {
       var bb = this.el.getBoundingClientRect();
-      var w = this.width = bb.width;
-      var h = this.height = bb.height;
+      this.width = bb.width;
+      this.height = bb.height;
 
       this.draw();
     },
 
     draw: function() {
-      var w = this.width;
-      var h = this.height;
+      this.canvas.width = this.width;
+      this.canvas.height = this.height;
 
-      this.canvas.width = w;
-      this.canvas.height = h;
-
-      this.context.beginPath();
-      this.drawBlockType[this._type].call(this);
       this.context.fillStyle = '#e1a91a';
-      this.context.fill();
-
-      this.context.beginPath();
-      this.context.moveTo(-3, -3);
-      this.context.lineTo(-3, h+3);
-      this.context.lineTo(w+3, h+3);
-      this.context.lineTo(w+3, -3);
-      this.context.closePath();
-      this.drawBlockType[this._type].call(this);
-
-      this.context.globalCompositeOperation = 'source-atop';
-
-      this.context.shadowOffsetX = 1;
-      this.context.shadowOffsetY = 1;
-      this.context.shadowBlur = 1;
-      this.context.shadowColor = 'rgba(255, 255, 255, .4)';
-      this.context.fill();
-
-      this.context.shadowOffsetX = -1;
-      this.context.shadowOffsetY = -1;
-      this.context.shadowBlur = 1;
-      this.context.shadowColor = 'rgba(0, 0, 0, .4)';
-      this.context.fill();
+      bezel(this.context, this.pathBlockType[this._type], this);
     }
   };
 
@@ -237,7 +247,10 @@ function Visual(options) {
 
 
   function Arg(info) {
-    this.el = el('Visual-part Visual-arg');
+    this.el = el();
+    this.el.appendChild(this.canvas = el('canvas', 'Visual-canvas'));
+    this.context = this.canvas.getContext('2d');
+
     if (typeof info === 'string') info = info.split('.');
     this.type = info[0];
     this.menu = info[1];
@@ -246,6 +259,25 @@ function Visual(options) {
   Arg.prototype = {
     constructor: Arg,
 
+    argClasses: {
+      b: 'Visual-part',
+      c: 'Visual-part Visual-color-arg',
+      d: 'Visual-part Visual-field-arg Visual-numeric-arg Visual-with-menu',
+      m: 'Visual-part Visual-enum-arg',
+      n: 'Visual-part Visual-field-arg Visual-numeric-arg',
+      s: 'Visual-part Visual-field-arg Visual-string-arg',
+      t: 'Visual-script-arg',
+    },
+
+    pathArgType: {
+      b: 'pathBooleanShape',
+      c: 'pathRectShape',
+      n: 'pathRoundedShape',
+      d: 'pathRoundedShape',
+      m: 'pathRectShape',
+      s: 'pathRectShape'
+    },
+
     isArg: true,
     isBlock: false,
     isScript: false,
@@ -253,12 +285,125 @@ function Visual(options) {
 
     parent: null,
 
+    get type() {return this._type},
+    set type(value) {
+      this._type = value;
+
+      if (this.field) this.el.removeChild(this.field);
+      this.el.className = this.argClasses[value];
+
+      switch (this.type) {
+        case 's':
+        case 'n':
+        case 'd':
+          this.field = el('input', 'Visual-field Visual-text-field');
+          this.field.addEventListener('input', this.layout.bind(this));
+          break;
+        case 'c':
+          this.field = el('input', 'Visual-field Visual-color-field');
+          this.field.type = 'color';
+          this.field.addEventListener('input', this.draw.bind(this));
+          break;
+      }
+      if (this.field) this.el.appendChild(this.field);
+
+      this.layout();
+    },
+
     get workspace() {return this.parent && this.parent.workspace},
 
-    layoutChildren: function() {},
+    draw: function() {
+      this.canvas.width = this.width;
+      this.canvas.height = this.height;
 
-    layout: function() {if (this.parent) this.parent.layout()}
+      if (this._type === 't') {
+        return;
+      }
+
+      var field = this._type !== 'c' && this._type !== 'm';
+
+      this.context.fillStyle =
+        field ? '#fff' :
+        this._type === 'c' ? this.field.value : 'rgba(0, 0, 0, .2)';
+      bezel(this.context, this[this.pathArgType[this._type]], this, true, field ? null : '#000');
+    },
+
+    pathRoundedShape: function(context) {
+      var r = Math.min(this.height, this.width)/2;
+      var w = this.width;
+      var h = this.height;
+
+      context.moveTo(0, r);
+      context.arc(r, r, r, PI, PI32, false);
+      context.arc(w - r, r, r, PI32, 0, false);
+      context.arc(w - r, h - r, r, 0, PI12, false);
+      context.arc(r, h - r, r, PI12, PI, false);
+    },
+
+    pathRectShape: function(context) {
+      var w = this.width;
+      var h = this.height;
+
+      context.moveTo(0, 0);
+      context.lineTo(w, 0);
+      context.lineTo(w, h);
+      context.lineTo(0, h);
+    },
+
+    layoutSelf: function() {
+      // var bb = this.el.getBoundingClientRect();
+      // this.width = bb.width;
+      // this.height = bb.height;
+
+      switch (this._type) {
+        case 's':
+        case 'n':
+        case 'd':
+          this.width = Math.max(4, measureArg(this.field.value)) + 9;
+          this.field.style.width = this.width + 'px';
+          this.height = 15;
+          break;
+        default:
+          this.width = 13;
+          this.height = 13;
+          break;
+      }
+
+      this.el.style.width = this.width+'px';
+      this.el.style.height = this.height+'px';
+
+      this.draw();
+    },
+
+    layoutChildren: function() {
+      this.layoutSelf();
+    },
+
+    layout: function() {
+      if (!this.parent) return;
+
+      this.layoutSelf();
+      this.parent.layout();
+    }
   };
+
+  var measureArg = function() {
+    var field = el('Visual-field Visual-field-measure');
+    var node = document.createTextNode('');
+    field.appendChild(node);
+    document.body.appendChild(field);
+
+    var hasOwnProperty = Object.prototype.hasOwnProperty;
+    var stringCache = Object.create(null);
+
+    return function measureArg(text) {
+      if (hasOwnProperty.call(stringCache, text)) {
+        return stringCache[text];
+      }
+      node.data = text;
+      return stringCache[text] = field.offsetWidth;
+    };
+  }();
 
 
   function Script() {
@@ -281,6 +426,7 @@ function Visual(options) {
     get workspace() {return this.parent && this.parent.workspace},
 
     add: function(block) {
+      block.parent = this;
       this.blocks.push(block);
       this.el.appendChild(block.el);
 
@@ -339,17 +485,21 @@ function Visual(options) {
 
     parent: null,
 
-    add: function(x, y, s) {
-      this.scripts.push(s);
-      s.moveTo(x, y);
-      this.el.appendChild(s.el);
+    get workspace() {return this},
 
-      s.layoutChildren();
+    add: function(x, y, script) {
+      script.parent = this;
+      this.scripts.push(script);
+
+      script.moveTo(x, y);
+      this.el.appendChild(script.el);
+
+      script.layoutChildren();
 
       return this;
     },
 
-    get workspace() {return this}
+    layout: function() {}
   };
 
 

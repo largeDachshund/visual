@@ -1,6 +1,11 @@
 .Visual-workspace {
   background: #eee;
   cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
 }
 
 body.Visual-workspace {
@@ -11,6 +16,7 @@ body.Visual-workspace {
 .Visual-script {
   padding-top: 3px;
   max-width: 600px;
+  pointer-events: none;
 }
 
 .Visual-absolute-script {
@@ -47,6 +53,38 @@ body.Visual-workspace {
   position: relative;
   vertical-align: middle;
   margin: 0 2px;
+}
+
+.Visual-field {
+  position: absolute;
+  pointer-events: auto;
+  font: 400 12px/15px Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+
+.Visual-color-field {
+  opacity: 0;
+  width: 13px;
+  height: 13px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.Visual-text-field {
+  padding: 2px 4px 1px 5px;
+  height: 15px;
+  box-sizing: border-box;
+  margin: 0;
+  border: 0;
+  background: 0;
+  outline: 0;
+}
+
+.Visual-field-measure {
+  position: absolute;
+  top: -10000px;
+  left: -10000px;
+  white-space: pre;
 }
 
 .Visual-label {

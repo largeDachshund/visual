@@ -13,21 +13,24 @@ var categories = [
   [1,  "Motion",      '#4a6cd4'],
   [2,  "Looks",       '#8a55d7'],
   [3,  "Sound",       '#bb42c3'],
-  [4,  "Pen",         '#0e9a6c'], // Scratch 1.4: 0x009870
+  [4,  "Pen",         '#0e9a6c'], // Scratch 1.4: #009870
   [5,  "Events",      '#c88330'],
   [6,  "Control",     '#e1a91a'],
   [7,  "Sensing",     '#2ca5e2'],
   [8,  "Operators",   '#5cb712'],
-  [9,  "Data",        '#ee7d16'], // Scratch 1.4: 0xF3761D
-  [10, "More Blocks", '#632d99'], // 0x531E99
+  [9,  "Data",        '#ee7d16'], // Scratch 1.4: #f3761d
+  [10, "More Blocks", '#632d99'], // #531e99
   [11, "Parameter",   '#5947b1'],
-  [12, "List",        '#cc5b22'], // Scratch 1.4: 0xD94D11
-  [20, "Exension",    '#4b4a60'], // 0x72228C // 0x672D79
+  [12, "List",        '#cc5b22'], // Scratch 1.4: #d94d11
+  [20, "Exension",    '#4b4a60'], // #72228c / #672d79
 ];
 
 var vis = Visual({
   blocks: {
-    wait: [' ', 'wait %n secs', 1],
+    foo: ['c', 'foo color %c?'],
+    say: ['c', 'say %s', 'Hello!'],
+    move: ['c', 'move %n steps', 10],
+    wait: ['c', 'wait %n secs', 1],
     deleteClone: ['f', 'delete this clone']
   }
 });
@@ -35,6 +38,9 @@ var vis = Visual({
 var w = new vis.Workspace(document.body);
 
 w.add(20, 20, new vis.Script()
+  .add(new vis.Block('foo'))
+  .add(new vis.Block('say'))
+  .add(new vis.Block('move'))
   .add(new vis.Block('wait'))
   .add(new vis.Block('deleteClone')));
 
