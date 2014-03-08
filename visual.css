@@ -24,7 +24,7 @@ body.Visual-workspace {
   top: 0;
   left: 0;
   white-space: nowrap;
-  /*pointer-events: none;*/
+  pointer-events: none;
 }
 
 .Visual-block {
@@ -44,6 +44,27 @@ body.Visual-workspace {
   padding-bottom: 6px;
 }
 
+.Visual-reporter {
+  padding: 2px;
+}
+
+.Visual-reporter > .Visual-canvas + .Visual-label,
+.Visual-reporter > .Visual-canvas + .Visual-string-arg {
+  margin-left: 5px;
+}
+.Visual-reporter > .Visual-label:last-child,
+.Visual-reporter > .Visual-string-arg:last-child {
+  margin-right: 5px;
+}
+.Visual-boolean-reporter > .Visual-canvas + .Visual-label,
+.Visual-boolean-reporter > .Visual-canvas + .Visual-string-arg {
+  margin-left: 9px;
+}
+.Visual-boolean-reporter > .Visual-label:last-child,
+.Visual-boolean-reporter > .Visual-string-arg:last-child {
+  margin-right: 9px;
+}
+
 .Visual-canvas {
   position: absolute;
   top: 0;
@@ -54,13 +75,21 @@ body.Visual-workspace {
   display: inline-block;
   position: relative;
   vertical-align: middle;
-  margin: 0 2px;
+  margin-left: 2px;
+  margin-right: 2px;
+}
+
+.Visual-field-arg {
+  margin-top: 1px;
+  margin-bottom: 1px;
 }
 
 .Visual-field {
   position: absolute;
-  pointer-events: auto;
   font: 400 12px/15px Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+.Visual-field:focus {
+  pointer-events: auto;
 }
 
 .Visual-script-arg {
@@ -73,6 +102,10 @@ body.Visual-workspace {
   margin-bottom: 12px;
 }
 
+.Visual-color-arg {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
 .Visual-color-field {
   opacity: 0;
   width: 13px;
@@ -80,6 +113,7 @@ body.Visual-workspace {
   padding: 0;
   margin: 0;
   border: 0;
+  pointer-events: auto;
 }
 
 .Visual-text-field {

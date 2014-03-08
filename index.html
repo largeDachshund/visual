@@ -26,23 +26,45 @@ var categories = [
 ];
 
 var vis = Visual({
+  categories: {
+    undefined: ["undefined", '#d42828'],
+    motion: ["Motion", '#4a6cd4'],
+    looks: ["Looks", '#8a55d7'],
+    sound: ["Sound", '#bb42c3'],
+    pen: ["Pen", '#0e9a6c'], // Scratch 1.4: #009870
+    events: ["Events", '#c88330'],
+    control: ["Control", '#e1a91a'],
+    sensing: ["Sensing", '#2ca5e2'],
+    operators: ["Operators", '#5cb712'],
+    data: ["Data", '#ee7d16'], // Scratch 1.4: #f3761d
+    moreBlocks: ["More Blocks", '#632d99'], // #531e99
+    parameter: ["Parameter", '#5947b1'],
+    list: ["List", '#cc5b22'], // Scratch 1.4: #d94d11
+    exension: ["Exension", '#4b4a60'] // #72228c / #672d79
+  },
   blocks: {
-    repeat: ['c', 'repeat %n %t', 10],
-    foo: ['c', 'foo color %c?'],
-    say: ['c', 'say %s', 'Hello!'],
-    move: ['c', 'move %n steps', 10],
-    wait: ['c', 'wait %n secs', 1],
-    deleteClone: ['f', 'delete this clone']
+    if: ['c', 'if %b then %t', 'control'],
+    repeat: ['c', 'repeat %n %t', 'control', 10],
+    say: ['c', 'say %s', 'looks', 'Hello!'],
+    move: ['c', 'move %n steps', 'motion', 10],
+    wait: ['c', 'wait %n secs', 'control', 1],
+    deleteClone: ['f', 'delete this clone', 'control'],
+    touchingColor: ['b', 'touching color %c?', 'sensing'],
+    answer: ['r', 'answer', 'sensing'],
+    add: ['r', '%n + %n', 'operators', ' ', ' '],
+    and: ['b', '%b and %b', 'operators'],
+    join: ['r', 'join %s and %s', 'operators'],
+    equal: ['b', '%s = %s', 'operators']
   }
 });
 
 var w = new vis.Workspace(document.body);
 
 w.add(20, 20, new vis.Script()
-  .add(new vis.Block('repeat'))
-  .add(new vis.Block('foo'))
+  .add(new vis.Block('repeat', [10]))
   .add(new vis.Block('say'))
-  .add(new vis.Block('move'))
+  .add(new vis.Block('if', [new vis.Block('and', [new vis.Block('touchingColor'), new vis.Block('equal')])]))
+  .add(new vis.Block('move', [new vis.Block('add', [new vis.Block('join', [new vis.Block('answer')]), 1])]))
   .add(new vis.Block('wait'))
   .add(new vis.Block('deleteClone')));
 

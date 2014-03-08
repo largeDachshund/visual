@@ -10,6 +10,11 @@ function Visual(options) {
       return b.slice(0, 2).concat(name, b.slice(2));
     };
   }
+  if (!options.getCategory) {
+    options.getCategory = function(name) {
+      return [name].concat(options.categories[name]);
+    };
+  }
 
 
   function el(tagName, className) {
@@ -65,16 +70,23 @@ function Visual(options) {
   }
 
 
-  function Block(info) {
+  function Block(info, args) {
     this.el = el('Visual-block');
     this.el.appendChild(this.canvas = el('canvas', 'Visual-canvas'));
     this.context = this.canvas.getContext('2d');
 
     if (typeof info === 'string') info = options.getBlock(info);
 
+    if (!args) args = [];
+    this.args = args.concat(info.slice(4 + args.length));
+
+    var category = info[3];
+    if (typeof category === 'string') category = options.getCategory(category);
+
     this.type = info[0];
     this.spec = info[1];
     this.name = info[2];
+    this.color = category[2];
   }
 
   var PI12 = Math.PI * 1/2;
@@ -87,8 +99,8 @@ function Visual(options) {
     blockClasses: {
       c: 'Visual-command Visual-puzzled Visual-block',
       f: 'Visual-command Visual-block',
-      r: 'Visual-part Visual-block',
-      b: 'Visual-part Visual-block'
+      r: 'Visual-part Visual-block Visual-reporter',
+      b: 'Visual-part Visual-block Visual-reporter Visual-boolean-reporter'
     },
 
     isArg: false,
@@ -109,6 +121,29 @@ function Visual(options) {
       },
       f: function(context) {
         this.pathCommandShape(false, context);
+      },
+      r: function(context) {
+        var w = this.width;
+        var h = this.height;
+        var r = Math.min(w / 2, h / 2);
+
+        context.moveTo(0, r);
+        context.arc(r, r, r, PI, PI32, false);
+        context.arc(w - r, r, r, PI32, 0, false);
+        context.arc(w - r, h - r, r, 0, PI12, false);
+        context.arc(r, h - r, r, PI12, PI, false);
+      },
+      b: function(context) {
+        var w = this.width;
+        var h = this.height;
+        var r = Math.min(h / 2, w / 2);
+
+        context.moveTo(0, r);
+        context.lineTo(r, 0);
+        context.lineTo(w - r, 0);
+        context.lineTo(w, r);
+        context.lineTo(w - r, h);
+        context.lineTo(r, h);
       }
     },
 
@@ -160,7 +195,7 @@ function Visual(options) {
         i++;
         if (parts[i]) {
           var old = args[this.args.length];
-          this.add(old && old.isArg ? old : new Arg(parts[i]));
+          this.add(old && old.isBlock ? old : new Arg(parts[i], old));
         }
         i++;
       }
@@ -171,6 +206,13 @@ function Visual(options) {
       this._type = value;
 
       this.el.className = this.blockClasses[value];
+    },
+
+    get color() {return this._color},
+    set color(value) {
+      this._color = value;
+
+      if (this.parent) this.draw();
     },
 
     get workspace() {return this.parent && this.parent.workspace},
@@ -242,7 +284,7 @@ function Visual(options) {
       this.canvas.width = this.width;
       this.canvas.height = this.height;
 
-      this.context.fillStyle = '#e1a91a';
+      this.context.fillStyle = this._color;
       bezel(this.context, this.pathBlock, this);
     }
   };
@@ -278,7 +320,7 @@ function Visual(options) {
   };
 
 
-  function Arg(info) {
+  function Arg(info, value) {
     this.el = el();
     this.el.appendChild(this.canvas = el('canvas', 'Visual-canvas'));
     this.context = this.canvas.getContext('2d');
@@ -286,6 +328,8 @@ function Visual(options) {
     if (typeof info === 'string') info = info.split('.');
     this.type = info[0];
     this.menu = info[1];
+
+    if (value != null) this.value = value;
   }
 
   Arg.prototype = {
@@ -317,6 +361,39 @@ function Visual(options) {
 
     parent: null,
 
+    get value() {
+      switch (this._type) {
+        case 'c':
+        case 'd':
+        case 'n':
+        case 's':
+          return this.field.value;
+        case 't':
+          return this.script;
+      }
+    },
+    set value(value) {
+      switch (this._type) {
+        case 'd':
+        case 'n':
+        case 'm':
+        case 's':
+        case 'c':
+          this.field.value = value;
+          return;
+        case 't':
+          if (value.isScript) {
+            this.el.removeChild(this.script);
+            this.script = value;
+            this.el.appendChild(value.el);
+          } else {
+            value.forEach(function(v) {
+              this.script.add(v);
+            }, this);
+          }
+      }
+    },
+
     get type() {return this._type},
     set type(value) {
       this._type = value;
@@ -329,18 +406,18 @@ function Visual(options) {
         this.el.appendChild(this.canvas);
       }
 
-      switch (this.type) {
-        case 's':
-        case 'n':
-        case 'd':
-          this.field = el('input', 'Visual-field Visual-text-field');
-          this.field.addEventListener('input', this.layout.bind(this));
-          break;
+      switch (value) {
         case 'c':
           this.field = el('input', 'Visual-field Visual-color-field');
           this.field.type = 'color';
           this.field.value = randColor();
           this.field.addEventListener('input', this.draw.bind(this));
+          break;
+        case 'd':
+        case 'n':
+        case 's':
+          this.field = el('input', 'Visual-field Visual-text-field');
+          this.field.addEventListener('input', this.layout.bind(this));
           break;
         case 't':
           this.script = new Script();
@@ -361,7 +438,7 @@ function Visual(options) {
 
       if (this._type === 't') return;
 
-      var field = this._type !== 'c' && this._type !== 'm';
+      var field = 'bcm'.indexOf(this._type) === -1;
 
       this.context.fillStyle =
         field ? '#fff' :
@@ -391,11 +468,19 @@ function Visual(options) {
       context.lineTo(0, h);
     },
 
-    layoutSelf: function() {
-      // var bb = this.el.getBoundingClientRect();
-      // this.width = bb.width;
-      // this.height = bb.height;
+    pathBooleanShape: function(context) {
+      var w = this.width;
+      var h = this.height;
+      var r = Math.min(w / 2, h / 2);
+      context.moveTo(0, r);
+      context.lineTo(r, 0);
+      context.lineTo(w - r, 0);
+      context.lineTo(w, r);
+      context.lineTo(w - r, h);
+      context.lineTo(r, h);
+    },
 
+    layoutSelf: function() {
       switch (this._type) {
         case 's':
         case 'n':
@@ -407,6 +492,10 @@ function Visual(options) {
         case 't':
           this.width = 0;
           this.height = Math.max(10, this.script.el.getBoundingClientRect().height);
+          break;
+        case 'b':
+          this.width = 27;
+          this.height = 13;
           break;
         default:
           this.width = 13;
