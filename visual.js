@@ -45,6 +45,8 @@ function Visual(options) {
     path.call(thisArg, context);
     context.fill();
 
+    context.save();
+    context.translate(-10000, -10000);
     context.beginPath();
     context.moveTo(-3, -3);
     context.lineTo(-3, h+3);
@@ -56,17 +58,19 @@ function Visual(options) {
     if (insetColor) context.fillStyle = insetColor;
     context.globalCompositeOperation = 'source-atop';
 
-    context.shadowOffsetX = s * 1;
-    context.shadowOffsetY = s * 1;
+    context.shadowOffsetX = 10000 + s * 1;
+    context.shadowOffsetY = 10000 + s * 1;
     context.shadowBlur = 1;
     context.shadowColor = 'rgba(255, 255, 255, .4)';
     context.fill();
 
-    context.shadowOffsetX = s * -1;
-    context.shadowOffsetY = s * -1;
+    context.shadowOffsetX = 10000 + s * -1;
+    context.shadowOffsetY = 10000 + s * -1;
     context.shadowBlur = 1;
     context.shadowColor = 'rgba(0, 0, 0, .4)';
     context.fill();
+
+    context.restore();
   }
 
 
