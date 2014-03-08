@@ -13,16 +13,18 @@ body.Visual-workspace {
   margin: 0;
 }
 
-.Visual-script {
-  padding-top: 3px;
-  max-width: 600px;
-  pointer-events: none;
-}
-
-.Visual-absolute-script {
+.Visual-fill {
   position: absolute;
   top: 0;
   left: 0;
+}
+
+.Visual-script {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  /*pointer-events: none;*/
 }
 
 .Visual-block {
@@ -34,11 +36,11 @@ body.Visual-workspace {
   display: block;
   float: left;
   clear: both;
-  margin-top: -3px;
   padding: 3px 5px;
 }
 
 .Visual-puzzled {
+  margin-bottom: -3px;
   padding-bottom: 6px;
 }
 
@@ -59,6 +61,16 @@ body.Visual-workspace {
   position: absolute;
   pointer-events: auto;
   font: 400 12px/15px Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+
+.Visual-script-arg {
+  margin: 3px 0 3px 10px;
+  display: block;
+  position: relative;
+}
+
+.Visual-script-arg:last-child {
+  margin-bottom: 12px;
 }
 
 .Visual-color-field {

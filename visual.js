@@ -18,6 +18,11 @@ function Visual(options) {
     return d;
   }
 
+  function randColor() {
+    var s = (Math.random() * 0x1000000 | 0).toString(16);
+    return '#'+'000000'.slice(s.length)+s;
+  }
+
   function setTransform(el, transform) {
     el.style.WebkitTransform =
     el.style.MozTransform =
@@ -95,8 +100,8 @@ function Visual(options) {
 
     radius: 4,
     puzzle: 3,
-    puzzleWidth: 10,
-    puzzleInset: 12,
+    puzzleWidth: 9,
+    puzzleInset: 14,
 
     pathBlockType: {
       c: function(context) {
@@ -143,8 +148,9 @@ function Visual(options) {
       var parts = value.split(/(?:@(\w+)|%(\w+(?:\.\w+)?))/g);
       var i = 0;
       for (;;) {
-        if (parts[i]) {
-          this.add(new Label(parts[i]));
+        var text = parts[i].trim();
+        if (text) {
+          this.add(new Label(text));
         }
         i++;
         if (i >= parts.length) break;
@@ -206,12 +212,38 @@ function Visual(options) {
       this.draw();
     },
 
+    pathBlock: function(context) {
+      this.pathBlockType[this._type].call(this, context);
+      var w = this.width;
+      var r = this.radius;
+      var p = this.puzzle;
+      var pi = this.puzzleInset;
+      var pw = this.puzzleWidth;
+      this.args.forEach(function(a) {
+        if (a._type === 't') {
+          var x = a.el.offsetLeft;
+          var y = a.el.offsetTop;
+          var h = a.height;
+          context.moveTo(x + r, y);
+          context.arc(x + r, y + r, r, PI32, PI, true);
+          context.arc(x + r, y + h - r, r, PI, PI12, true);
+          context.arc(w - r, y + h + r, r, PI32, 0, false);
+          context.arc(w - r, y - r, r, 0, PI12, false);
+          context.lineTo(x + pi + pw + p * 2, y);
+          context.lineTo(x + pi + pw + p, y + p);
+          context.lineTo(x + pi + p, y + p);
+          context.lineTo(x + pi, y);
+          context.closePath();
+        }
+      });
+    },
+
     draw: function() {
       this.canvas.width = this.width;
       this.canvas.height = this.height;
 
       this.context.fillStyle = '#e1a91a';
-      bezel(this.context, this.pathBlockType[this._type], this);
+      bezel(this.context, this.pathBlock, this);
     }
   };
 
@@ -289,8 +321,13 @@ function Visual(options) {
     set type(value) {
       this._type = value;
 
-      if (this.field) this.el.removeChild(this.field);
       this.el.className = this.argClasses[value];
+
+      if (this.field) this.el.removeChild(this.field);
+      if (this.script) {
+        this.el.removeChild(this.script);
+        this.el.appendChild(this.canvas);
+      }
 
       switch (this.type) {
         case 's':
@@ -302,7 +339,13 @@ function Visual(options) {
         case 'c':
           this.field = el('input', 'Visual-field Visual-color-field');
           this.field.type = 'color';
+          this.field.value = randColor();
           this.field.addEventListener('input', this.draw.bind(this));
+          break;
+        case 't':
+          this.script = new Script();
+          this.script.parent = this;
+          this.el.appendChild(this.script.el);
           break;
       }
       if (this.field) this.el.appendChild(this.field);
@@ -316,9 +359,7 @@ function Visual(options) {
       this.canvas.width = this.width;
       this.canvas.height = this.height;
 
-      if (this._type === 't') {
-        return;
-      }
+      if (this._type === 't') return;
 
       var field = this._type !== 'c' && this._type !== 'm';
 
@@ -362,6 +403,10 @@ function Visual(options) {
           this.width = Math.max(4, measureArg(this.field.value)) + 9;
           this.field.style.width = this.width + 'px';
           this.height = 15;
+          break;
+        case 't':
+          this.width = 0;
+          this.height = Math.max(10, this.script.el.getBoundingClientRect().height);
           break;
         default:
           this.width = 13;
@@ -430,7 +475,7 @@ function Visual(options) {
       this.blocks.push(block);
       this.el.appendChild(block.el);
 
-      block.layoutChildren();
+      if (this.parent) block.layoutChildren();
       this.layout();
 
       return this;
@@ -464,12 +509,15 @@ function Visual(options) {
   };
 
 
-  function Workspace(el) {
-    this.el = el;
+  function Workspace(host) {
+    this.el = host;
     this.el.className += ' Visual-workspace';
 
-    if (el.tagName === 'BODY' && el.parentNode) {
-      el.parentNode.style.height = '100%';
+    this.el.appendChild(this.fill = el('Visual-fill'));
+    this.el.addEventListener('scroll', this.layout.bind(this));
+
+    if (host.tagName === 'BODY' && host.parentNode) {
+      host.parentNode.style.height = '100%';
     }
 
     this.scripts = [];
@@ -499,7 +547,9 @@ function Visual(options) {
       return this;
     },
 
-    layout: function() {}
+    layout: function() {
+
+    }
   };
 
 

@@ -27,6 +27,7 @@ var categories = [
 
 var vis = Visual({
   blocks: {
+    repeat: ['c', 'repeat %n %t', 10],
     foo: ['c', 'foo color %c?'],
     say: ['c', 'say %s', 'Hello!'],
     move: ['c', 'move %n steps', 10],
@@ -38,10 +39,16 @@ var vis = Visual({
 var w = new vis.Workspace(document.body);
 
 w.add(20, 20, new vis.Script()
+  .add(new vis.Block('repeat'))
   .add(new vis.Block('foo'))
   .add(new vis.Block('say'))
   .add(new vis.Block('move'))
   .add(new vis.Block('wait'))
   .add(new vis.Block('deleteClone')));
+
+w.scripts[0].blocks[0].args[1].script
+  .add(new vis.Block('repeat'))
+  .add(new vis.Block('wait'))
+  .add(new vis.Block('say'));
 
 </script>
