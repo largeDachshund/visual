@@ -86,7 +86,8 @@ body.Visual-workspace {
 
 .Visual-field {
   position: absolute;
-  font: 400 12px/15px Helvetica Neue, Helvetica, Arial, sans-serif;
+  color: #555;
+  font: 400 10px/1.2 Helvetica Neue, Helvetica, Arial, sans-serif;
 }
 .Visual-field:focus {
   pointer-events: auto;
@@ -117,8 +118,8 @@ body.Visual-workspace {
 }
 
 .Visual-text-field {
-  padding: 2px 4px 1px 5px;
-  height: 15px;
+  padding: .1em 4px .1em 5px;
+  height: 1.4em;
   box-sizing: border-box;
   margin: 0;
   border: 0;
@@ -134,6 +135,7 @@ body.Visual-workspace {
 }
 
 .Visual-label {
-  font: 500 12px/15px Helvetica Neue, Helvetica, Arial, sans-serif;
+  font: 600 11px/1.4 Helvetica Neue, Helvetica, Arial, sans-serif;
+  letter-spacing: .02em;
   color: #fff;
 }

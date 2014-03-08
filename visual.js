@@ -36,7 +36,7 @@ function Visual(options) {
     el.style.transform = transform;
   }
 
-  function bezel(context, path, thisArg, inset, insetColor) {
+  function bezel(context, path, thisArg, inset, alpha) {
     var s = inset ? -1 : 1;
     var w = context.canvas.width;
     var h = context.canvas.height;
@@ -55,7 +55,7 @@ function Visual(options) {
     context.closePath();
     path.call(thisArg, context);
 
-    if (insetColor) context.fillStyle = insetColor;
+    if (alpha) context.fillStyle = '#000';
     context.globalCompositeOperation = 'source-atop';
 
     context.shadowOffsetX = 10000 + s * 1;
@@ -129,7 +129,7 @@ function Visual(options) {
       r: function(context) {
         var w = this.width;
         var h = this.height;
-        var r = Math.min(w / 2, h / 2);
+        var r = Math.min(w, h) / 2;
 
         context.moveTo(0, r);
         context.arc(r, r, r, PI, PI32, false);
@@ -140,7 +140,7 @@ function Visual(options) {
       b: function(context) {
         var w = this.width;
         var h = this.height;
-        var r = Math.min(h / 2, w / 2);
+        var r = Math.min(h, w) / 2;
 
         context.moveTo(0, r);
         context.lineTo(r, 0);
@@ -251,9 +251,8 @@ function Visual(options) {
     },
 
     layoutSelf: function() {
-      var bb = this.el.getBoundingClientRect();
-      this.width = bb.width;
-      this.height = bb.height;
+      this.width = this.el.offsetWidth;
+      this.height = this.el.offsetHeight;
 
       this.draw();
     },
@@ -447,13 +446,13 @@ function Visual(options) {
       this.context.fillStyle =
         field ? '#fff' :
         this._type === 'c' ? this.field.value : 'rgba(0, 0, 0, .2)';
-      bezel(this.context, this[this.pathArgType[this._type]], this, true, field ? null : '#000');
+      bezel(this.context, this[this.pathArgType[this._type]], this, true, !field);
     },
 
     pathRoundedShape: function(context) {
-      var r = Math.min(this.height, this.width)/2;
       var w = this.width;
       var h = this.height;
+      var r = Math.min(w, h) / 2;
 
       context.moveTo(0, r);
       context.arc(r, r, r, PI, PI32, false);
@@ -475,7 +474,8 @@ function Visual(options) {
     pathBooleanShape: function(context) {
       var w = this.width;
       var h = this.height;
-      var r = Math.min(w / 2, h / 2);
+      var r = Math.min(w, h) / 2;
+
       context.moveTo(0, r);
       context.lineTo(r, 0);
       context.lineTo(w - r, 0);
@@ -489,13 +489,13 @@ function Visual(options) {
         case 's':
         case 'n':
         case 'd':
-          this.width = Math.max(4, measureArg(this.field.value)) + 9;
+          this.width = Math.max(6, measureArg(this.field.value)) + 9;
+          this.height = this.field.offsetHeight;
           this.field.style.width = this.width + 'px';
-          this.height = 15;
           break;
         case 't':
           this.width = 0;
-          this.height = Math.max(10, this.script.el.getBoundingClientRect().height);
+          this.height = Math.max(10, this.script.el.offsetHeight);
           break;
         case 'b':
           this.width = 27;

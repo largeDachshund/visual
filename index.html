@@ -63,6 +63,7 @@ var w = new vis.Workspace(document.body);
 w.add(20, 20, new vis.Script()
   .add(new vis.Block('repeat', [10]))
   .add(new vis.Block('say'))
+  // .add(new vis.Block('if'))
   .add(new vis.Block('if', [new vis.Block('and', [new vis.Block('touchingColor'), new vis.Block('equal')])]))
   .add(new vis.Block('move', [new vis.Block('add', [new vis.Block('join', [new vis.Block('answer')]), 1])]))
   .add(new vis.Block('wait'))
