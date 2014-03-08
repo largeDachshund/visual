@@ -23,6 +23,17 @@ function Visual(options) {
     return d;
   }
 
+  function layout() {
+    if (!this.parent) return;
+
+    this.layoutSelf();
+    this.parent.layout();
+  }
+
+  function layoutNoChildren() {
+    this.layoutSelf();
+  }
+
   function randColor() {
     var s = (Math.random() * 0x1000000 | 0).toString(16);
     return '#'+'000000'.slice(s.length)+s;
@@ -237,11 +248,7 @@ function Visual(options) {
       return this;
     },
 
-    layout: function() {
-      if (!this.parent) return;
-      this.layoutSelf();
-      this.parent.layout();
-    },
+    layout: layout,
 
     layoutChildren: function() {
       this.parts.forEach(function(p) {
@@ -317,9 +324,74 @@ function Visual(options) {
 
     get workspace() {return this.parent && this.parent.workspace},
 
-    layoutChildren: function() {},
+    layoutSelf: function() {},
+    layoutChildren: layoutNoChildren,
+    layout: layout
+  };
 
-    layout: function() {if (this.parent) this.parent.layout()}
+
+  function Icon(name) {
+    this.el = el('Visual-part');
+    this.name = name;
+  }
+
+  Icon.prototype = {
+    constructor: Icon,
+
+    isArg: false,
+    isBlock: false,
+    isScript: false,
+    isWorkspace: false,
+
+    parent: null,
+
+    get name() {return this._name},
+    set name(value) {
+      this.el.className = 'Visual-part Visual-icon-' + value;
+      this._name = value;
+    },
+
+    get workspace() {return this.parent && this.parent.workspace},
+
+    layoutSelf: function() {
+      if (this.name) {
+        this.el.appendChild(this.canvas = el('canvas', 'Visual-canvas'));
+        this.canvas.width = 14;
+        this.canvas.height = 11;
+
+        var context = this.canvas.getContext('2d');
+        this.pathLoopArrow(context);
+        context.fillStyle = 'rgba(0, 0, 0, .3)';
+        context.fill();
+
+        context.translate(-1, -1);
+        this.pathLoopArrow(context);
+        context.fillStyle = 'rgba(255, 255, 255, .9)';
+        context.fill();
+
+      } else if (this.canvas) {
+        this.el.removeChild(this.canvas);
+        this.canvas = undefined;
+      }
+    },
+    layoutChildren: layoutNoChildren,
+    layout: layout,
+
+    pathLoopArrow: function(context) {
+      // m 1,11 8,0 2,-2 0,-3 3,0 -4,-5 -4,5 3,0 0,3 -8,0 z
+      context.beginPath();
+      context.moveTo(1, 11);
+      context.lineTo(9, 11);
+      context.lineTo(11, 9);
+      context.lineTo(11, 6);
+      context.lineTo(14, 6);
+      context.lineTo(10, 1);
+      context.lineTo(6, 6);
+      context.lineTo(9, 6);
+      context.lineTo(9, 9);
+      context.lineTo(1, 9);
+      context.lineTo(1, 11);
+    }
   };
 
 
@@ -513,16 +585,8 @@ function Visual(options) {
       this.draw();
     },
 
-    layoutChildren: function() {
-      this.layoutSelf();
-    },
-
-    layout: function() {
-      if (!this.parent) return;
-
-      this.layoutSelf();
-      this.parent.layout();
-    }
+    layoutChildren: layoutNoChildren,
+    layout: layout
   };
 
   var measureArg = function() {

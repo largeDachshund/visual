@@ -100,7 +100,7 @@ body.Visual-workspace {
 }
 
 .Visual-script-arg:last-child {
-  margin-bottom: 12px;
+  margin-bottom: 13px;
 }
 
 .Visual-color-arg {
@@ -138,4 +138,13 @@ body.Visual-workspace {
   font: 600 11px/1.4 Helvetica Neue, Helvetica, Arial, sans-serif;
   letter-spacing: .02em;
   color: #fff;
+}
+
+.Visual-icon-loop {
+  position: absolute;
+  width: 14px;
+  height: 11px;
+  bottom: 6px;
+  right: 2px;
+  margin: 0;
 }

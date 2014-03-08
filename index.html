@@ -44,7 +44,7 @@ var vis = Visual({
   },
   blocks: {
     if: ['c', 'if %b then %t', 'control'],
-    repeat: ['c', 'repeat %n %t', 'control', 10],
+    repeat: ['c', '@loop repeat %n %t', 'control', 10],
     say: ['c', 'say %s', 'looks', 'Hello!'],
     move: ['c', 'move %n steps', 'motion', 10],
     wait: ['c', 'wait %n secs', 'control', 1],
