@@ -1,5 +1,5 @@
 .Visual-workspace {
-  background: #eee;
+  background: #ddd;
   cursor: default;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -28,6 +28,10 @@ body.Visual-workspace {
   line-height: 1px;
 }
 
+.Visual-script-dragging {
+  z-index: 1;
+}
+
 .Visual-block {
   position: relative;
 }
@@ -49,19 +53,23 @@ body.Visual-workspace {
 }
 
 .Visual-reporter > .Visual-canvas + .Visual-label,
-.Visual-reporter > .Visual-canvas + .Visual-string-arg {
+.Visual-reporter > .Visual-canvas + .Visual-string-arg,
+.Visual-reporter > .Visual-canvas + .Visual-color-arg {
   margin-left: 5px;
 }
 .Visual-reporter > .Visual-label:last-child,
-.Visual-reporter > .Visual-string-arg:last-child {
+.Visual-reporter > .Visual-string-arg:last-child,
+.Visual-reporter > .Visual-color-arg:last-child {
   margin-right: 5px;
 }
 .Visual-boolean-reporter > .Visual-canvas + .Visual-label,
-.Visual-boolean-reporter > .Visual-canvas + .Visual-string-arg {
+.Visual-boolean-reporter > .Visual-canvas + .Visual-string-arg,
+.Visual-boolean-reporter > .Visual-canvas + .Visual-color-arg {
   margin-left: 9px;
 }
 .Visual-boolean-reporter > .Visual-label:last-child,
-.Visual-boolean-reporter > .Visual-string-arg:last-child {
+.Visual-boolean-reporter > .Visual-string-arg:last-child,
+.Visual-boolean-reporter > .Visual-color-arg:last-child {
   margin-right: 9px;
 }
 
@@ -69,6 +77,10 @@ body.Visual-workspace {
   position: absolute;
   top: 0;
   left: 0;
+}
+
+.Visual-feedback {
+  z-index: 1;
 }
 
 .Visual-part {

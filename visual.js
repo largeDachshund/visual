@@ -60,7 +60,7 @@ function Visual(options) {
   function setTransform(el, transform) {
     el.style.WebkitTransform =
     el.style.MozTransform =
-    el.style.MSTransform =
+    el.style.msTransform =
     el.style.OTransform =
     el.style.transform = transform;
   }
@@ -73,6 +73,7 @@ function Visual(options) {
     context.beginPath();
     path.call(thisArg, context);
     context.fill();
+    // context.clip();
 
     context.save();
     context.translate(-10000, -10000);
@@ -84,7 +85,7 @@ function Visual(options) {
     context.closePath();
     path.call(thisArg, context);
 
-    if (alpha) context.fillStyle = '#000';
+    // if (alpha) context.fillStyle = '#000';
     context.globalCompositeOperation = 'source-atop';
 
     context.shadowOffsetX = 10000 + s * -1;
@@ -119,6 +120,9 @@ function Visual(options) {
 
     this.name = info[2];
     this.type = info[0];
+    this.isHat = this.type === 'h';
+    this.isFinal = this.type === 'f';
+    this.isReporter = this.type === 'r' || this.type === 'b';
     this.spec = info[1];
     this.color = category[2];
   }
@@ -157,9 +161,9 @@ function Visual(options) {
         this.pathCommandShape(false, context);
       },
       r: function(context) {
-        var w = this.width;
+        var w = this.ownWidth;
         var h = this.height;
-        var r = Math.min(w, h) / 2;
+        var r = Math.min(w, (this.hasScript ? 15 : h)) / 2;
 
         context.moveTo(0, r);
         context.arc(r, r, r, PI, PI32, false);
@@ -168,7 +172,7 @@ function Visual(options) {
         context.arc(r, h - r, r, PI12, PI, false);
       },
       b: function(context) {
-        var w = this.width;
+        var w = this.ownWidth;
         var h = this.height;
         var r = Math.min(h, w) / 2;
 
@@ -186,7 +190,7 @@ function Visual(options) {
       var p = this.puzzle;
       var pi = this.puzzleInset;
       var pw = this.puzzleWidth;
-      var w = this.width;
+      var w = this.ownWidth;
       var h = this.height - bottom * p;
       context.moveTo(0, r);
       context.arc(r, r, r, PI, PI32, false);
@@ -214,6 +218,7 @@ function Visual(options) {
       this.args = [];
       this.labels = [];
       this.parts = [];
+      this.hasScript = false;
 
       var parts = value.split(/(?:@(\w+)|%(\w+(?:\.\w+)?))/g);
       var i = 0;
@@ -233,6 +238,9 @@ function Visual(options) {
           var arg = new Arg(parts[i], old && old.isBlock ? this.defaultArgs[this.args.length] : old);
           this.inputs.push(arg);
           this.add(old && old.isBlock ? old : arg);
+          if (arg._type === 't') {
+            this.hasScript = true;
+          }
         }
         i++;
       }
@@ -349,15 +357,23 @@ function Visual(options) {
     },
 
     layoutSelf: function() {
-      this.width = this.el.offsetWidth;
+      this.ownWidth = this.width = this.el.offsetWidth;
       this.height = this.el.offsetHeight;
+
+      var args = this.args;
+      for (var i = args.length; i--;) {
+        var arg = args[i];
+        if (arg._type === 't') {
+          this.width = Math.max(this.width, arg.el.offsetLeft + arg.script.width);
+        }
+      }
 
       this.draw();
     },
 
     pathBlock: function(context) {
       this.pathBlockType[this._type].call(this, context);
-      var w = this.width;
+      var w = this.ownWidth;
       var r = this.radius;
       var p = this.puzzle;
       var pi = this.puzzleInset;
@@ -382,7 +398,7 @@ function Visual(options) {
     },
 
     draw: function() {
-      this.canvas.width = this.width;
+      this.canvas.width = this.ownWidth;
       this.canvas.height = this.height;
 
       this.drawOn(this.context);
@@ -457,7 +473,7 @@ function Visual(options) {
 
     get name() {return this._name},
     set name(value) {
-      this.el.className = 'Visual-part Visual-icon-' + value;
+      this.el.className = 'Visual-part Visual-icon-'+value;
       this._name = value;
     },
 
@@ -648,8 +664,13 @@ function Visual(options) {
 
       context.fillStyle =
         field ? '#fff' :
-        this._type === 'c' ? this.field.value : 'rgba(0, 0, 0, .2)';
+        this._type === 'c' ? this.field.value : this.color;
       bezel(context, this[this.pathArgType[this._type]], this, true, !field);
+    },
+
+    pathShadowOn: function(context) {
+      if (this._type === 't') return;
+      this[this.pathArgType[this._type]].call(this, context);
     },
 
     pathRoundedShape: function(context) {
@@ -688,6 +709,19 @@ function Visual(options) {
     },
 
     layoutSelf: function() {
+      if (this._type === 'm' || this._type === 'b') {
+        var can = document.createElement('canvas');
+        can.width = 1;
+        can.height = 1;
+        var c = can.getContext('2d');
+        c.fillStyle = this.parent.color;
+        c.fillRect(0, 0, 1, 1);
+        c.fillStyle = 'rgba(0, 0, 0, .2)';
+        c.fillRect(0, 0, 1, 1);
+        var d = c.getImageData(0, 0, 1, 1).data;
+        var s = (d[0] * 0x10000 + d[1] * 0x100 + d[2]).toString(16);
+        this.color = '#' + '000000'.slice(s.length) + s;
+      }
       switch (this._type) {
         case 's':
         case 'n':
@@ -762,6 +796,11 @@ function Visual(options) {
     get workspace() {return this.parent && this.parent.workspace},
     get workspacePosition() {return getWorkspacePosition(this)},
 
+    get hasHat() {return this.blocks.length && this.blocks[0].isHat},
+    get hasFinal() {return this.blocks.length && this.blocks[this.blocks.length-1].isFinal},
+
+    get isReporter() {return this.blocks.length && this.blocks[0].isReporter},
+
     shadow: function(blur, color) {
       var canvas = el('canvas', 'Visual-canvas');
       canvas.width = this.width + blur * 2;
@@ -784,7 +823,7 @@ function Visual(options) {
       this.removeShadow();
 
       var canvas = this.shadow(blur, color);
-      setTransform(canvas, 'translate(' + (offsetX - blur) + 'px, ' + (offsetY - blur) + 'px)');
+      setTransform(canvas, 'translate('+(offsetX - blur)+'px, '+(offsetY - blur)+'px)');
       this._shadow = canvas;
       this.el.insertBefore(canvas, this.el.firstChild);
 
@@ -832,6 +871,11 @@ function Visual(options) {
     add: function(block) {
       if (block.parent) block.parent.remove(block);
 
+      if (block.isScript) {
+        this.addScript(block);
+        return this;
+      }
+
       block.parent = this;
       this.blocks.push(block);
       this.el.appendChild(block.el);
@@ -840,6 +884,78 @@ function Visual(options) {
       this.layout();
 
       return this;
+    },
+
+    addScript: function(script) {
+      var f = document.createDocumentFragment();
+
+      var blocks = script.blocks;
+      var length = blocks.length;
+      for (var i = 0; i < length; i++) {
+        var b = blocks[i];
+        b.parent = this;
+        f.appendChild(b.el);
+      }
+
+      this.blocks.push.apply(this.blocks, blocks);
+
+      script.blocks = [];
+      this.el.appendChild(f);
+
+      for (var i = 0; i < length; i++) {
+        blocks[i].layout();
+      }
+
+      this.layout();
+    },
+
+    insert: function(block, beforeBlock) {
+      if (!beforeBlock || beforeBlock.parent !== this) return this.add(block);
+      if (block.parent) block.parent.remove(block);
+
+      if (block.isScript) {
+        this.insertScript(block, beforeBlock);
+        return this;
+      }
+
+      block.parent = this;
+      var i = this.blocks.indexOf(beforeBlock);
+      this.blocks.splice(i, 0, block);
+      this.el.insertBefore(block.el, beforeBlock.el);
+
+
+      if (this.parent) block.layoutChildren();
+      this.layout();
+
+      return this;
+    },
+
+    insertScript: function(script, beforeBlock) {
+      var f = document.createDocumentFragment();
+
+      var blocks = script.blocks;
+      var length = blocks.length;
+      for (var i = 0; i < length; i++) {
+        var b = blocks[i];
+        b.parent = this;
+        f.appendChild(b.el);
+      }
+
+      var i = this.blocks.indexOf(beforeBlock);
+      this.blocks.splice.apply(this.blocks, [i, 0].concat(blocks));
+
+      script.blocks = [];
+      this.el.insertBefore(f, beforeBlock.el);
+
+      if (i === 0 && this.parent && this.parent.isWorkspace) {
+        this.moveTo(this.x, this.y - script.height);
+      }
+
+      for (var i = 0; i < length; i++) {
+        blocks[i].layout();
+      }
+
+      this.layout();
     },
 
     replace: function(oldBlock, newBlock) {
@@ -890,8 +1006,13 @@ function Visual(options) {
     layout: layout,
 
     layoutSelf: function() {
-      this.width = this.el.offsetWidth;
+      this.width = 0;
       this.height = this.el.offsetHeight;
+
+      var blocks = this.blocks;
+      for (var i = blocks.length; i--;) {
+        this.width = Math.max(this.width, blocks[i].width);
+      }
     },
 
     moveTo: function(x, y) {
@@ -910,6 +1031,11 @@ function Visual(options) {
     this.el.addEventListener('mousedown', this.press.bind(this));
     document.addEventListener('mousemove', this.drag.bind(this));
     document.addEventListener('mouseup', this.drop.bind(this));
+
+    this.feedback = el('canvas', 'Visual-canvas Visual-feedback');
+    this.feedbackContext = this.feedback.getContext('2d');
+    this.feedback.style.display = 'none';
+    this.el.appendChild(this.feedback);
 
     this.scripts = [];
 
@@ -952,6 +1078,17 @@ function Visual(options) {
       return this;
     },
 
+    remove: function(script) {
+      if (script.parent !== this) return this;
+      script.parent = null;
+
+      var i = this.scripts.indexOf(script);
+      this.scripts.splice(i, 1);
+      this.el.removeChild(script.el);
+
+      return this;
+    },
+
     objectFromPoint: function(x, y) {
       var scripts = this.scripts;
       for (var i = scripts.length; i--;) {
@@ -973,11 +1110,23 @@ function Visual(options) {
     },
 
     drag: function(e) {
-      this.updateMouse(e);
+      if (e) this.updateMouse(e);
 
       if (this.dragging) {
         this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
-        e.preventDefault();
+        this.resetFeedback();
+        if (this.dragScript.blocks[0].isReporter) {
+          this.showReporterFeedback();
+        } else {
+          this.showCommandFeedback();
+        }
+        if (this.feedbackInfo) {
+          this.renderFeedback(this.feedbackInfo);
+          this.feedback.style.display = 'block';
+        } else {
+          this.feedback.style.display = 'none';
+        }
+        if (e) e.preventDefault();
       } else if (this.pressed && this.shouldDrag) {
         this.dragging = true;
         this.dragObject = this.pressObject.dragObject;
@@ -987,16 +1136,133 @@ function Visual(options) {
         this.dragY = pos.y - this.pressY;
 
         this.dragScript = this.dragObject.detach();
+        this.dragScript.el.classList.add('Visual-script-dragging');
         this.add(this.dragX + this.mouseX, this.dragY + this.mouseY, this.dragScript);
         this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
         e.preventDefault();
       }
     },
 
+    resetFeedback: function() {
+      this.feedbackDistance = Infinity;
+      this.feedbackInfo = null;
+    },
+
+    commandFeedbackRange: 70,
+    feedbackRange: 20,
+
+    showCommandFeedback: function() {
+      this.commandHasHat = this.dragScript.hasHat;
+      this.commandHasFinal = this.dragScript.hasFinal;
+      var scripts = this.scripts;
+      var length = scripts.length;
+      for (var i = 0; i < length; i++) {
+        if (scripts[i] !== this.dragScript) {
+          this.addScriptCommandFeedback(0, 0, scripts[i]);
+        }
+      }
+    },
+
+    addScriptCommandFeedback: function(x, y, script) {
+      x += script.x;
+      y += script.y;
+      if (!script.hasFinal && !script.isReporter) {
+        this.addFeedback({
+          x: x,
+          y: y + script.height,
+          rangeX: this.commandFeedbackRange,
+          rangeY: this.feedbackRange,
+          type: 'append',
+          script: script
+        });
+      }
+      var blocks = script.blocks;
+      var length = blocks.length;
+      for (var i = 0; i < length; i++) {
+        this.addBlockCommandFeedback(x, y, blocks[i], i === 0);
+      }
+    },
+
+    addBlockCommandFeedback: function(x, y, block, isTop) {
+      y += block.el.offsetTop;
+      var args = block.args;
+      var length = args.length;
+      for (var i = 0; i < length; i++) {
+        var a = args[i];
+        if (a.isBlock) {
+          this.addBlockCommandFeedback(x + a.el.offsetLeft, y + a.el.offsetTop, a);
+        } else if (a._type === 't') {
+          this.addScriptCommandFeedback(x + a.el.offsetLeft, y + a.el.offsetTop, a.script);
+        }
+      }
+      if (isTop && block.isHat || !isTop && this.commandHasHat || this.commandHasFinal || block.isReporter) return;
+      this.addFeedback({
+        x: x,
+        y: y,
+        rangeX: this.commandFeedbackRange,
+        rangeY: this.feedbackRange,
+        type: 'insert',
+        script: block.parent,
+        block: block
+      });
+    },
+
+    showReporterFeedback: function() {
+
+    },
+
+    addFeedback: function(obj) {
+      var dx = obj.x - this.dragScript.x;
+      var dy = obj.y - this.dragScript.y;
+      var d2 = dx * dx + dy * dy;
+      if (Math.abs(dx) > obj.rangeX || Math.abs(dy) > obj.rangeY || d2 > this.feedbackDistance) return;
+      this.feedbackDistance = d2;
+      this.feedbackInfo = obj;
+    },
+
+    feedbackLineWidth: 6,
+
+    renderFeedback: function(info) {
+      var canvas = this.feedback;
+      var context = this.feedbackContext;
+      var b = this.dragScript.blocks[0];
+      var l = this.feedbackLineWidth;
+
+      switch (info.type) {
+        case 'insert':
+        case 'append':
+          var pi = b.puzzleInset;
+          var pw = b.puzzleWidth;
+          var p = b.puzzle;
+          var r = l/2;
+          setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.y - r)+'px)');
+          canvas.width = b.width + l;
+          canvas.height = l + p;
+          context.lineWidth = l;
+          context.lineCap = 'round';
+          context.strokeStyle = '#fff';
+          context.moveTo(r, r);
+          context.lineTo(pi + r, r);
+          context.lineTo(pi + p + r, r + p);
+          context.lineTo(pi + pw + p + r, r + p);
+          context.lineTo(pi + pw + p * 2 + r, r);
+          context.lineTo(canvas.width - r, r);
+          context.stroke();
+          return;
+      }
+    },
+
     drop: function(e) {
       this.updateMouse(e);
       if (this.dragging) {
+        if (this.feedbackInfo) this.applyDrop(this.feedbackInfo);
+
+        this.dragScript.el.classList.remove('Visual-script-dragging');
         this.dragScript.removeShadow();
+        this.feedback.style.display = 'none';
+
+        this.dragScript = null;
+        this.layout();
       } else if (this.shouldDrag) {
         if (this.pressObject.isArg) {
           if (this.pressObject.field) {
@@ -1008,6 +1274,17 @@ function Visual(options) {
       this.pressed = false;
     },
 
+    applyDrop: function(info) {
+      switch (info.type) {
+        case 'append':
+          info.script.add(this.dragScript);
+          return;
+        case 'insert':
+          info.script.insert(this.dragScript, info.block);
+          return;
+      }
+    },
+
     updateMouse: function(e) {
       var bb = this.el.getBoundingClientRect();
       this.mouseX = e.clientX - bb.left;
@@ -1015,6 +1292,13 @@ function Visual(options) {
     },
 
     scroll: function() {
+      var scrollX = this.el.scrollLeft;
+      var scrollY = this.el.scrollTop;
+      this.mouseX += scrollX - this.scrollX;
+      this.mouseY += scrollY - this.scrollY;
+      this.scrollX = scrollX;
+      this.scrollY = scrollY;
+      this.drag();
       this.refill();
     },
 
@@ -1024,12 +1308,20 @@ function Visual(options) {
       var y = p;
       var width = 0;
       var height = 0;
-      this.scripts.forEach(function(script) {
+
+      var scripts = this.scripts;
+      for (var i = scripts.length; i--;) {
+        var script = scripts[i];
+        if (script === this.dragScript) continue;
+        if (script.blocks.length === 0) {
+          this.remove(script);
+          continue;
+        }
         x = Math.min(x, script.x);
         y = Math.min(y, script.y);
         width = Math.max(width, script.x - x + script.width);
         height = Math.max(height, script.y - y + script.height);
-      });
+      }
 
       if (x < p || y < p) {
         x -= p;
