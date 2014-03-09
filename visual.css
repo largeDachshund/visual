@@ -25,11 +25,11 @@ body.Visual-workspace {
   left: 0;
   white-space: nowrap;
   pointer-events: none;
+  line-height: 1px;
 }
 
 .Visual-block {
   position: relative;
-  line-height: 1px;
 }
 
 .Visual-command {
@@ -77,6 +77,10 @@ body.Visual-workspace {
   vertical-align: middle;
   margin-left: 2px;
   margin-right: 2px;
+}
+
+.Visual-script > .Visual-part {
+  margin: 0;
 }
 
 .Visual-field-arg {

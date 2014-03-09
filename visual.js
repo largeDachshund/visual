@@ -34,6 +34,24 @@ function Visual(options) {
     this.layoutSelf();
   }
 
+  function getWorkspacePosition(o) {
+    var ws = o.workspace.el;
+    var wb = ws.getBoundingClientRect();
+    var ob = o.el.getBoundingClientRect();
+    return {
+      x: ob.left - wb.left | 0,
+      y: ob.top - wb.top | 0
+    };
+  }
+
+  function containsPoint(extent, x, y) {
+    return x >= 0 && y >= 0 && x < extent.width && y < extent.height;
+  }
+
+  function transparentAt(context, x, y) {
+    return containsPoint(context.canvas, x, y) && context.getImageData(x, y, 1, 1).data[3] > 0;
+  }
+
   function randColor() {
     var s = (Math.random() * 0x1000000 | 0).toString(16);
     return '#'+'000000'.slice(s.length)+s;
@@ -93,14 +111,15 @@ function Visual(options) {
     if (typeof info === 'string') info = options.getBlock(info);
 
     if (!args) args = [];
-    this.args = args.concat(info.slice(4 + args.length));
+    this.defaultArgs = info.slice(4);
+    this.args = args.concat(this.defaultArgs.slice(args.length));
 
     var category = info[3];
     if (typeof category === 'string') category = options.getCategory(category);
 
+    this.name = info[2];
     this.type = info[0];
     this.spec = info[1];
-    this.name = info[2];
     this.color = category[2];
   }
 
@@ -191,6 +210,7 @@ function Visual(options) {
       this._spec = value;
 
       var args = this.args || [];
+      this.inputs = [];
       this.args = [];
       this.labels = [];
       this.parts = [];
@@ -210,7 +230,9 @@ function Visual(options) {
         i++;
         if (parts[i]) {
           var old = args[this.args.length];
-          this.add(old && old.isBlock ? old : new Arg(parts[i], old));
+          var arg = new Arg(parts[i], old && old.isBlock ? this.defaultArgs[this.args.length] : old);
+          this.inputs.push(arg);
+          this.add(old && old.isBlock ? old : arg);
         }
         i++;
       }
@@ -231,6 +253,9 @@ function Visual(options) {
     },
 
     get workspace() {return this.parent && this.parent.workspace},
+    get workspacePosition() {return getWorkspacePosition(this)},
+
+    get dragObject() {return this},
 
     add: function(part) {
       part.parent = this;
@@ -246,6 +271,72 @@ function Visual(options) {
       this.layout();
 
       return this;
+    },
+
+    replace: function(oldPart, newPart) {
+      if (oldPart.parent !== this) return this;
+
+      oldPart.parent = null;
+      newPart.parent = this;
+
+      var i = this.parts.indexOf(oldPart);
+      this.parts.splice(i, 1, newPart);
+
+      var array = oldPart.isArg || oldPart.isBlock ? this.args : this.labels;
+      i = array.indexOf(oldPart);
+      array.splice(i, 1, newPart);
+
+      this.el.replaceChild(newPart.el, oldPart.el);
+
+      if (this.parent) newPart.layoutChildren();
+      this.layout();
+
+      return this;
+    },
+
+    remove: function(part) {
+      if (part.parent !== this) return this;
+
+      part.parent = null;
+      var i = this.parts.indexOf(part);
+      this.parts.splice(i, 1);
+
+      var array = part.isArg ? this.args : this.labels;
+      i = array.indexOf(part);
+      array.splice(i, 1);
+
+      this.el.removeChild(part.el);
+
+      return this;
+    },
+
+    reset: function(arg) {
+      if (arg.parent !== this || !arg.isArg && !arg.isBlock) return this;
+
+      var i = this.args.indexOf(arg);
+      this.replace(arg, this.inputs[i]);
+
+      return this;
+    },
+
+    detach: function() {
+      if (this.parent.isBlock) {
+        this.parent.reset(this);
+        return new Script().add(this);
+      }
+      if (this.parent.isScript) {
+        return this.parent.splitAt(this);
+      }
+    },
+
+    objectFromPoint: function(x, y) {
+      var args = this.args;
+      for (var i = args.length; i--;) {
+        var arg = args[i];
+        var o = arg.objectFromPoint(x - arg.el.offsetLeft, y - arg.el.offsetTop);
+        if (o) return o;
+      }
+      return transparentAt(this.context, x, y) ? this : null;
     },
 
     layout: layout,
@@ -323,6 +414,9 @@ function Visual(options) {
     },
 
     get workspace() {return this.parent && this.parent.workspace},
+    get workspacePosition() {return getWorkspacePosition(this)},
+
+    get dragObject() {return this.parent.dragObject},
 
     layoutSelf: function() {},
     layoutChildren: layoutNoChildren,
@@ -352,8 +446,15 @@ function Visual(options) {
     },
 
     get workspace() {return this.parent && this.parent.workspace},
+    get workspacePosition() {return getWorkspacePosition(this)},
+
+    get dragObject() {return this.parent.dragObject},
 
     layoutSelf: function() {
+      if (this.canvas) {
+        this.el.removeChild(this.canvas);
+        this.canvas = undefined;
+      }
       if (this.name) {
         this.el.appendChild(this.canvas = el('canvas', 'Visual-canvas'));
         this.canvas.width = 14;
@@ -369,9 +470,6 @@ function Visual(options) {
         context.fillStyle = 'rgba(255, 255, 255, .9)';
         context.fill();
 
-      } else if (this.canvas) {
-        this.el.removeChild(this.canvas);
-        this.canvas = undefined;
       }
     },
     layoutChildren: layoutNoChildren,
@@ -508,6 +606,17 @@ function Visual(options) {
     },
 
     get workspace() {return this.parent && this.parent.workspace},
+    get workspacePosition() {return getWorkspacePosition(this)},
+
+    get dragObject() {return this.parent.dragObject},
+
+    objectFromPoint: function(x, y) {
+      switch (this._type) {
+        case 'b': return null;
+        case 't': return this.script.objectFromPoint(x, y);
+      }
+      return transparentAt(this.context, x, y) ? this : null;
+    },
 
     draw: function() {
       this.canvas.width = this.width;
@@ -631,8 +740,26 @@ function Visual(options) {
     parent: null,
 
     get workspace() {return this.parent && this.parent.workspace},
+    get workspacePosition() {return getWorkspacePosition(this)},
+
+    splitAt: function(topBlock) {
+      var script = new Script();
+      if (topBlock.parent !== this) return script;
+
+      var blocks = this.blocks;
+      var i = blocks.indexOf(topBlock);
+
+      while (i < blocks.length) {
+        script.add(blocks[i]);
+      }
+
+      this.layout();
+      return script;
+    },
 
     add: function(block) {
+      if (block.parent) block.parent.remove(block);
+
       block.parent = this;
       this.blocks.push(block);
       this.el.appendChild(block.el);
@@ -641,6 +768,44 @@ function Visual(options) {
       this.layout();
 
       return this;
+    },
+
+    replace: function(oldBlock, newBlock) {
+      if (oldBlock.parent !== this) return this;
+
+      oldBlock.parent = null;
+      newBlock.parent = this;
+
+      var i = this.blocks.indexOf(oldBlock);
+      this.blocks.splice(i, 1, newBlock);
+      this.el.replaceChild(newBlock.el, oldBlock.el);
+
+      if (this.parent) newBlock.layoutChildren();
+      this.layout();
+
+      return this;
+    },
+
+    remove: function(block) {
+      if (block.parent !== this) return this;
+
+      block.parent = null;
+      var i = this.blocks.indexOf(block);
+      this.blocks.splice(i, 1);
+      this.el.removeChild(block.el);
+
+      return this;
+    },
+
+    objectFromPoint: function(x, y) {
+      if (!containsPoint(this, x, y)) return null;
+      var blocks = this.blocks;
+      for (var i = blocks.length; i--;) {
+        var block = blocks[i];
+        var o = block.objectFromPoint(x, y - block.el.offsetTop);
+        if (o) return o;
+      }
+      return null;
     },
 
     layoutChildren: function() {
@@ -670,16 +835,19 @@ function Visual(options) {
     this.el.className += ' Visual-workspace';
 
     this.el.appendChild(this.fill = el('Visual-fill'));
-    window.addEventListener('resize', this.layout.bind(this));
+    this.el.addEventListener('mousedown', this.press.bind(this));
+    document.addEventListener('mousemove', this.drag.bind(this));
+    document.addEventListener('mouseup', this.drop.bind(this));
 
     this.scripts = [];
 
     if (host.tagName === 'BODY' && host.parentNode) {
       host.parentNode.style.height = '100%';
-      window.addEventListener('scroll', this.refill.bind(this));
+      window.addEventListener('resize', this.layout.bind(this));
+      window.addEventListener('scroll', this.scroll.bind(this));
       this.layout();
     } else {
-      this.el.addEventListener('scroll', this.refill.bind(this));
+      this.el.addEventListener('scroll', this.scroll.bind(this));
     }
   }
 
@@ -697,6 +865,7 @@ function Visual(options) {
     extraSpace: 100,
 
     get workspace() {return this},
+    get workspacePosition() {return {x: 0, y: 0}},
 
     add: function(x, y, script) {
       script.parent = this;
@@ -709,6 +878,71 @@ function Visual(options) {
       this.layout();
 
       return this;
+    },
+
+    objectFromPoint: function(x, y) {
+      var scripts = this.scripts;
+      for (var i = scripts.length; i--;) {
+        var script = scripts[i];
+        var o = script.objectFromPoint(x - script.x, y - script.y);
+        if (o) return o;
+      }
+      return null;
+    },
+
+    press: function(e) {
+      this.updateMouse(e);
+      this.pressX = this.mouseX;
+      this.pressY = this.mouseY;
+      this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
+      this.shouldDrag = this.pressObject && !(this.pressObject.isArg && this.pressObject.field && document.activeElement === this.pressObject.field);
+      this.pressed = true;
+      this.dragging = false;
+    },
+
+    drag: function(e) {
+      this.updateMouse(e);
+
+      if (this.dragging) {
+        this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
+        e.preventDefault();
+      } else if (this.pressed && this.shouldDrag) {
+        this.dragging = true;
+        this.dragObject = this.pressObject.dragObject;
+
+        var pos = this.dragObject.workspacePosition;
+        this.dragX = pos.x - this.pressX;
+        this.dragY = pos.y - this.pressY;
+
+        this.dragScript = this.dragObject.detach();
+        this.add(this.dragX + this.mouseX, this.dragY + this.mouseY, this.dragScript);
+        e.preventDefault();
+      }
+    },
+
+    drop: function(e) {
+      this.updateMouse(e);
+      if (this.dragging) {
+
+      } else if (this.shouldDrag) {
+        if (this.pressObject.isArg) {
+          if (this.pressObject.field) {
+            this.pressObject.field.select();
+          }
+        }
+      }
+      this.dragging = false;
+      this.pressed = false;
+    },
+
+    updateMouse: function(e) {
+      var bb = this.el.getBoundingClientRect();
+      this.mouseX = e.clientX - bb.left;
+      this.mouseY = e.clientY - bb.top;
+    },
+
+    scroll: function() {
+      this.refill();
     },
 
     layout: function() {
