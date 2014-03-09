@@ -79,6 +79,12 @@ body.Visual-workspace {
   left: 0;
 }
 
+.Visual-arrow {
+  position: absolute;
+  right: 4px;
+  top: 6px;
+}
+
 .Visual-feedback {
   z-index: 1;
 }
@@ -133,7 +139,7 @@ body.Visual-workspace {
   pointer-events: auto;
 }
 
-.Visual-text-field {
+.Visual-field {
   padding: .1em 4px .2em 5px;
   height: 1.5em;
   box-sizing: border-box;
@@ -144,11 +150,17 @@ body.Visual-workspace {
   outline: 0;
 }
 
+.Visual-enum-field {
+  padding: .1em 5px .2em 4px;
+  color: #fff;
+}
+
 .Visual-field-measure {
   position: absolute;
   top: -10000px;
   left: -10000px;
   white-space: pre;
+  padding: 0;
 }
 
 .Visual-label {

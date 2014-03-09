@@ -46,6 +46,7 @@ var vis = Visual({
     if: ['c', 'if %b then %t', 'control'],
     repeat: ['c', '@loop repeat %n %t', 'control', 10],
     say: ['c', 'say %s', 'looks', 'Hello!'],
+    set: ['c', 'set %m.var to %s', 'data', 'variable', 0],
     move: ['c', 'move %n steps', 'motion', 10],
     wait: ['c', 'wait %n secs', 'control', 1],
     deleteClone: ['f', 'delete this clone', 'control'],
@@ -55,7 +56,8 @@ var vis = Visual({
     and: ['b', '%b and %b', 'operators'],
     lambda: ['r', 'lambda %t', 'operators'],
     join: ['r', 'join %s %s', 'operators'],
-    equal: ['b', '%s = %s', 'operators']
+    equal: ['b', '%s = %s', 'operators'],
+    play: ['c', 'play drum %d.drum for %n beats', 'sound', 1, 10],
   }
 });
 
@@ -73,6 +75,7 @@ w.add(20, 20, new vis.Script()
 w.scripts[0].blocks[0].args[1].script
   .add(new vis.Block('repeat'))
   .add(new vis.Block('wait'))
-  .add(new vis.Block('say'));
+  .add(new vis.Block('set'))
+  .add(new vis.Block('play'));
 
 </script>

@@ -586,18 +586,22 @@ function Visual(options) {
         case 'n':
         case 's':
           return this.field.value;
+        case 'm':
+          return this._value;
         case 't':
           return this.script;
       }
     },
     set value(value) {
       switch (this._type) {
+        case 'c':
         case 'd':
         case 'n':
-        case 'm':
         case 's':
-        case 'c':
           this.field.value = value;
+          return;
+        case 'm':
+          this.field.textContent = value;
           return;
         case 't':
           if (value.isScript) {
@@ -620,12 +624,9 @@ function Visual(options) {
 
       this.el.className = this.argClasses[value];
 
-      if (this.field) this.el.removeChild(this.field);
-      if (this.script) {
-        this.el.removeChild(this.script);
-        this.el.appendChild(this.canvas);
-      }
+      this.el.textContent = '';
 
+      var arrow;
       switch (value) {
         case 'c':
           this.field = el('input', 'Visual-field Visual-color-field');
@@ -634,18 +635,33 @@ function Visual(options) {
           this.field.addEventListener('input', this.draw.bind(this));
           break;
         case 'd':
+          arrow = true;
+          // fall through
         case 'n':
         case 's':
           this.field = el('input', 'Visual-field Visual-text-field');
           this.field.addEventListener('input', this.layout.bind(this));
           break;
+        case 'm':
+          arrow = true;
+          this.field = el('Visual-field Visual-enum-field');
+          break;
         case 't':
           this.script = new Script();
           this.script.parent = this;
-          this.el.appendChild(this.script.el);
           break;
       }
+      if (this.script) {
+        this.el.appendChild(this.script.el);
+      } else {
+        this.el.appendChild(this.canvas);
+      }
       if (this.field) this.el.appendChild(this.field);
+      if (arrow) {
+        this.arrow = el('canvas', 'Visual-arrow');
+        this.drawArrow();
+        this.el.appendChild(this.arrow);
+      }
 
       this.layout();
     },
@@ -726,6 +742,21 @@ function Visual(options) {
       context.lineTo(r, h);
     },
 
+    drawArrow: function() {
+      var w = 7;
+      var h = 4;
+      var canvas = this.arrow;
+      canvas.width = w;
+      canvas.height = h;
+      var context = canvas.getContext('2d');
+      context.fillStyle = 'rgba(0, 0, 0, .6)';
+      context.moveTo(0, 0);
+      context.lineTo(w, 0);
+      context.lineTo(w/2, h);
+      context.closePath();
+      context.fill();
+    },
+
     layoutSelf: function() {
       if (this._type === 'm' || this._type === 'b') {
         var can = document.createElement('canvas');
@@ -742,9 +773,10 @@ function Visual(options) {
       }
       switch (this._type) {
         case 's':
+        case 'm':
         case 'n':
         case 'd':
-          this.width = Math.max(6, measureArg(this.field.value)) + 9;
+          this.width = Math.max(6, measureArg(this._type === 'm' ? this.field.textContent : this.field.value)) + 9 + (this.arrow ? this.arrow.width + 1 : 0);
           this.height = this.field.offsetHeight;
           this.field.style.width = this.width + 'px';
           break;
@@ -1380,7 +1412,9 @@ function Visual(options) {
         this.layout();
       } else if (this.shouldDrag) {
         if (this.pressObject.isArg) {
-          if (this.pressObject.field) {
+          if (this.pressObject._type === 'm') {
+
+          } else if (this.pressObject.field) {
             this.pressObject.field.select();
           }
         }
@@ -1409,19 +1443,28 @@ function Visual(options) {
       }
     },
 
+    getScroll: function() {
+      if (this.el === document.body) {
+        return {x: window.scrollX, y: window.scrollY};
+      }
+      return {x: this.el.scrollLeft, y: this.el.scrollTop};
+    },
+
     updateMouse: function(e) {
       var bb = this.el.getBoundingClientRect();
       this.mouseX = e.clientX - bb.left;
       this.mouseY = e.clientY - bb.top;
+      var scroll = this.getScroll();
+      this.scrollX = scroll.x;
+      this.scrollY = scroll.y;
     },
 
     scroll: function() {
-      var scrollX = this.el.scrollLeft;
-      var scrollY = this.el.scrollTop;
-      this.mouseX += scrollX - this.scrollX;
-      this.mouseY += scrollY - this.scrollY;
-      this.scrollX = scrollX;
-      this.scrollY = scrollY;
+      var scroll = this.getScroll();
+      this.mouseX += scroll.x - this.scrollX;
+      this.mouseY += scroll.y - this.scrollY;
+      this.scrollX = scroll.x;
+      this.scrollY = scroll.y;
       this.drag();
       this.refill();
     },
@@ -1436,7 +1479,6 @@ function Visual(options) {
       var scripts = this.scripts;
       for (var i = scripts.length; i--;) {
         var script = scripts[i];
-        if (script === this.dragScript) continue;
         if (script.blocks.length === 0) {
           this.remove(script);
           continue;
@@ -1470,8 +1512,9 @@ function Visual(options) {
     },
 
     refill: function() {
-      var vw = this.el.offsetWidth + this.el.scrollLeft + this.extraSpace;
-      var vh = this.el.offsetHeight + this.el.scrollTop + this.extraSpace;
+      var scroll = this.getScroll();
+      var vw = this.el.offsetWidth + scroll.x + this.extraSpace;
+      var vh = this.el.offsetHeight + scroll.y + this.extraSpace;
 
       this.fill.style.width = Math.max(this.width, vw) + 'px';
       this.fill.style.height = Math.max(this.height, vh) + 'px';
