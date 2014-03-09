@@ -69,16 +69,16 @@ function Visual(options) {
     if (alpha) context.fillStyle = '#000';
     context.globalCompositeOperation = 'source-atop';
 
-    context.shadowOffsetX = 10000 + s * 1;
-    context.shadowOffsetY = 10000 + s * 1;
-    context.shadowBlur = 1;
-    context.shadowColor = 'rgba(255, 255, 255, .4)';
-    context.fill();
-
     context.shadowOffsetX = 10000 + s * -1;
     context.shadowOffsetY = 10000 + s * -1;
     context.shadowBlur = 1;
     context.shadowColor = 'rgba(0, 0, 0, .4)';
+    context.fill();
+
+    context.shadowOffsetX = 10000 + s * 1;
+    context.shadowOffsetY = 10000 + s * 1;
+    context.shadowBlur = 1;
+    context.shadowColor = 'rgba(255, 255, 255, .4)';
     context.fill();
 
     context.restore();
@@ -537,10 +537,10 @@ function Visual(options) {
       var w = this.width;
       var h = this.height;
 
-      context.moveTo(0, 0);
-      context.lineTo(w, 0);
-      context.lineTo(w, h);
-      context.lineTo(0, h);
+      context.moveTo(0, .5);
+      context.lineTo(w, .5);
+      context.lineTo(w, h-.5);
+      context.lineTo(0, h-.5);
     },
 
     pathBooleanShape: function(context) {
