@@ -603,7 +603,7 @@ function Visual(options) {
         return stringCache[text];
       }
       node.data = text;
-      return stringCache[text] = field.offsetWidth;
+      return stringCache[text] = field.offsetWidth + 1;
     };
   }();
 
