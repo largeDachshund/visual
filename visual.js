@@ -385,8 +385,24 @@ function Visual(options) {
       this.canvas.width = this.width;
       this.canvas.height = this.height;
 
-      this.context.fillStyle = this._color;
-      bezel(this.context, this.pathBlock, this);
+      this.drawOn(this.context);
+    },
+
+    drawOn: function (context) {
+      context.fillStyle = this._color;
+      bezel(context, this.pathBlock, this);
+    },
+
+    pathShadowOn: function(context) {
+      this.pathBlock(context);
+      this.args.forEach(function(a) {
+        if (a._type === 't') {
+          context.save();
+          context.translate(a.el.offsetLeft, a.el.offsetTop);
+          a.script.pathShadowOn(context);
+          context.restore();
+        }
+      });
     }
   };
 
@@ -622,14 +638,18 @@ function Visual(options) {
       this.canvas.width = this.width;
       this.canvas.height = this.height;
 
+      this.drawOn(this.context);
+    },
+
+    drawOn: function(context) {
       if (this._type === 't') return;
 
       var field = 'bcm'.indexOf(this._type) === -1;
 
-      this.context.fillStyle =
+      context.fillStyle =
         field ? '#fff' :
         this._type === 'c' ? this.field.value : 'rgba(0, 0, 0, .2)';
-      bezel(this.context, this[this.pathArgType[this._type]], this, true, !field);
+      bezel(context, this[this.pathArgType[this._type]], this, true, !field);
     },
 
     pathRoundedShape: function(context) {
@@ -741,6 +761,58 @@ function Visual(options) {
 
     get workspace() {return this.parent && this.parent.workspace},
     get workspacePosition() {return getWorkspacePosition(this)},
+
+    shadow: function(blur, color) {
+      var canvas = el('canvas', 'Visual-canvas');
+      canvas.width = this.width + blur * 2;
+      canvas.height = this.height + blur * 2;
+
+      var context = canvas.getContext('2d');
+      context.fillStyle = '#000';
+      context.shadowColor = color;
+      context.shadowBlur = blur;
+      context.shadowOffsetX = 10000 + blur;
+      context.shadowOffsetY = 10000 + blur;
+      context.translate(-10000, -10000);
+      this.pathShadowOn(context);
+      context.fill();
+
+      return canvas;
+    },
+
+    addShadow: function(offsetX, offsetY, blur, color) {
+      this.removeShadow();
+
+      var canvas = this.shadow(blur, color);
+      setTransform(canvas, 'translate(' + (offsetX - blur) + 'px, ' + (offsetY - blur) + 'px)');
+      this._shadow = canvas;
+      this.el.insertBefore(canvas, this.el.firstChild);
+
+      return this;
+    },
+
+    removeShadow: function() {
+      if (this._shadow) {
+        this.el.removeChild(this._shadow);
+        this._shadow = null;
+      }
+      return this;
+    },
+
+    pathShadowOn: function(context) {
+      context.save();
+      var blocks = this.blocks;
+      var length = blocks.length;
+      var y = 0;
+      for (var i = 0; i < length; i++) {
+        var b = blocks[i];
+        var ny = b.el.offsetTop;
+        context.translate(0, ny - y);
+        b.pathShadowOn(context);
+        y = ny;
+      }
+      context.restore();
+    },
 
     splitAt: function(topBlock) {
       var script = new Script();
@@ -916,6 +988,7 @@ function Visual(options) {
 
         this.dragScript = this.dragObject.detach();
         this.add(this.dragX + this.mouseX, this.dragY + this.mouseY, this.dragScript);
+        this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
         e.preventDefault();
       }
     },
@@ -923,7 +996,7 @@ function Visual(options) {
     drop: function(e) {
       this.updateMouse(e);
       if (this.dragging) {
-
+        this.dragScript.removeShadow();
       } else if (this.shouldDrag) {
         if (this.pressObject.isArg) {
           if (this.pressObject.field) {
