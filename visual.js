@@ -459,7 +459,9 @@ function Visual(options) {
         case 't':
           if (value.isScript) {
             this.el.removeChild(this.script);
+            this.script.parent = null;
             this.script = value;
+            value.parent = this;
             this.el.appendChild(value.el);
           } else {
             value.forEach(function(v) {
@@ -567,7 +569,7 @@ function Visual(options) {
           break;
         case 't':
           this.width = 0;
-          this.height = Math.max(10, this.script.el.offsetHeight);
+          this.height = Math.max(10, this.script.height);
           break;
         case 'b':
           this.width = 27;
@@ -612,7 +614,10 @@ function Visual(options) {
     this.el = el('Visual-script');
 
     this.blocks = [];
-    this.absolute = false;
+    this.x = 0;
+    this.y = 0;
+    this.width = 0;
+    this.height = 0;
   }
 
   Script.prototype = {
@@ -642,23 +647,17 @@ function Visual(options) {
       this.blocks.forEach(function(b) {
         b.layoutChildren();
       });
+      this.layoutSelf();
     },
 
-    layout: function() {
-      if (this.parent) this.parent.layout();
-    },
+    layout: layout,
 
-    _layout: function() {},
-
-    get absolute() {return this._absolute},
-    set absolute(value) {
-      this._absolute = value;
-
-      this.el.className = value ? 'Visual-script Visual-absolute-script' : 'Visual-script';
+    layoutSelf: function() {
+      this.width = this.el.offsetWidth;
+      this.height = this.el.offsetHeight;
     },
 
     moveTo: function(x, y) {
-      this.absolute = true;
       this.x = x;
       this.y = y;
       setTransform(this.el, 'translate('+x+'px,'+y+'px)');
@@ -671,13 +670,17 @@ function Visual(options) {
     this.el.className += ' Visual-workspace';
 
     this.el.appendChild(this.fill = el('Visual-fill'));
-    this.el.addEventListener('scroll', this.layout.bind(this));
+    window.addEventListener('resize', this.layout.bind(this));
+
+    this.scripts = [];
 
     if (host.tagName === 'BODY' && host.parentNode) {
       host.parentNode.style.height = '100%';
+      window.addEventListener('scroll', this.refill.bind(this));
+      this.layout();
+    } else {
+      this.el.addEventListener('scroll', this.refill.bind(this));
     }
-
-    this.scripts = [];
   }
 
   Workspace.prototype = {
@@ -690,6 +693,9 @@ function Visual(options) {
 
     parent: null,
 
+    padding: 20,
+    extraSpace: 100,
+
     get workspace() {return this},
 
     add: function(x, y, script) {
@@ -700,12 +706,52 @@ function Visual(options) {
       this.el.appendChild(script.el);
 
       script.layoutChildren();
+      this.layout();
 
       return this;
     },
 
     layout: function() {
+      var p = this.padding;
+      var x = p;
+      var y = p;
+      var width = 0;
+      var height = 0;
+      this.scripts.forEach(function(script) {
+        x = Math.min(x, script.x);
+        y = Math.min(y, script.y);
+        width = Math.max(width, script.x - x + script.width);
+        height = Math.max(height, script.y - y + script.height);
+      });
 
+      if (x < p || y < p) {
+        x -= p;
+        y -= p;
+        this.scripts.forEach(function(script) {
+          script.moveTo(script.x - x, script.y - y);
+        });
+        width -= x;
+        height -= y;
+      } else {
+        width += x;
+        height += y;
+      }
+
+      width += this.extraSpace;
+      height += this.extraSpace;
+
+      this.width = width;
+      this.height = height;
+
+      this.refill();
+    },
+
+    refill: function() {
+      var vw = this.el.offsetWidth + this.el.scrollLeft + this.extraSpace;
+      var vh = this.el.offsetHeight + this.el.scrollTop + this.extraSpace;
+
+      this.fill.style.width = Math.max(this.width, vw) + 'px';
+      this.fill.style.height = Math.max(this.height, vh) + 'px';
     }
   };
 
