@@ -123,6 +123,7 @@ function Visual(options) {
     this.isHat = this.type === 'h';
     this.isFinal = this.type === 'f';
     this.isReporter = this.type === 'r' || this.type === 'b';
+    this.isBoolean = this.type === 'b';
     this.spec = info[1];
     this.color = category[2];
   }
@@ -265,7 +266,17 @@ function Visual(options) {
 
     get dragObject() {return this},
 
+    acceptsDropOf: function(b) {
+      if (!this.parent || !this.parent.isBlock) return;
+      var args = this.parent.args;
+      var i = args.indexOf(this);
+      var def = this.parent.inputs[i];
+      return def && def.acceptsDropOf(b);
+    },
+
     add: function(part) {
+      if (part.parent) part.parent.remove(part);
+
       part.parent = this;
       this.parts.push(part);
 
@@ -283,6 +294,7 @@ function Visual(options) {
 
     replace: function(oldPart, newPart) {
       if (oldPart.parent !== this) return this;
+      if (newPart.parent) newPart.parent.remove(newPart);
 
       oldPart.parent = null;
       newPart.parent = this;
@@ -373,6 +385,7 @@ function Visual(options) {
 
     pathBlock: function(context) {
       this.pathBlockType[this._type].call(this, context);
+      context.closePath();
       var w = this.ownWidth;
       var r = this.radius;
       var p = this.puzzle;
@@ -642,6 +655,10 @@ function Visual(options) {
 
     get dragObject() {return this.parent.dragObject},
 
+    acceptsDropOf: function(b) {
+      return 'cmt'.indexOf(this.type) === -1 && (this.type !== 'b' || b.isBoolean);
+    },
+
     objectFromPoint: function(x, y) {
       switch (this._type) {
         case 'b': return null;
@@ -671,6 +688,7 @@ function Visual(options) {
     pathShadowOn: function(context) {
       if (this._type === 't') return;
       this[this.pathArgType[this._type]].call(this, context);
+      context.closePath();
     },
 
     pathRoundedShape: function(context) {
@@ -1208,7 +1226,53 @@ function Visual(options) {
     },
 
     showReporterFeedback: function() {
+      var scripts = this.scripts;
+      var length = scripts.length;
+      for (var i = 0; i < length; i++) {
+        if (scripts[i] !== this.dragScript) {
+          this.addScriptReporterFeedback(0, 0, scripts[i]);
+        }
+      }
+    },
 
+    addScriptReporterFeedback: function(x, y, script) {
+      x += script.x;
+      y += script.y;
+      var blocks = script.blocks;
+      var length = blocks.length;
+      for (var i = 0; i < length; i++) {
+        this.addBlockReporterFeedback(x, y, blocks[i]);
+      }
+    },
+
+    addBlockReporterFeedback: function(x, y, block) {
+      x += block.el.offsetLeft;
+      y += block.el.offsetTop;
+      var args = block.args;
+      var length = args.length;
+      for (var i = 0; i < length; i++) {
+        var a = args[i];
+        var ax = x + a.el.offsetLeft;
+        var ay = y + a.el.offsetTop;
+        if (a._type === 't') {
+          this.addScriptReporterFeedback(ax, ay, a.script);
+        } else {
+          if (a.isBlock) {
+            this.addBlockReporterFeedback(x, y, a);
+          }
+          if (a.acceptsDropOf(this.dragScript.blocks[0])) {
+            this.addFeedback({
+              x: ax,
+              y: ay,
+              rangeX: this.feedbackRange,
+              rangeY: this.feedbackRange,
+              type: 'replace',
+              block: block,
+              arg: a
+            });
+          }
+        }
+      }
     },
 
     addFeedback: function(obj) {
@@ -1227,6 +1291,7 @@ function Visual(options) {
       var context = this.feedbackContext;
       var b = this.dragScript.blocks[0];
       var l = this.feedbackLineWidth;
+      var r = l/2;
 
       switch (info.type) {
         case 'insert':
@@ -1234,7 +1299,6 @@ function Visual(options) {
           var pi = b.puzzleInset;
           var pw = b.puzzleWidth;
           var p = b.puzzle;
-          var r = l/2;
           setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.y - r)+'px)');
           canvas.width = b.width + l;
           canvas.height = l + p;
@@ -1249,6 +1313,57 @@ function Visual(options) {
           context.lineTo(canvas.width - r, r);
           context.stroke();
           return;
+        case 'replace':
+          var w = info.arg.width;
+          var h = info.arg.height;
+          canvas.width = w + l * 2;
+          canvas.height = h + l * 2;
+          setTransform(canvas, 'translate('+(info.x - l)+'px, '+(info.y - l)+'px)');
+
+          context.translate(l, l);
+
+          info.arg.pathShadowOn(context);
+
+          context.lineWidth = l;
+          context.lineCap = 'round';
+          context.strokeStyle = '#fff';
+          context.stroke();
+
+          context.globalCompositeOperation = 'destination-out';
+          context.beginPath();
+          info.arg.pathShadowOn(context);
+          context.fill();
+          context.globalCompositeOperation = 'source-over';
+          context.fillStyle = 'rgba(255, 255, 255, .6)';
+          context.fill();
+          return;
+        // case 'replace': // Scratch 2.0
+        //   var w = info.arg.width;
+        //   var h = info.arg.height;
+        //   l += 1;
+        //   canvas.width = w + l * 2;
+        //   canvas.height = h + l * 2;
+        //   setTransform(canvas, 'translate('+(info.x - l)+'px, '+(info.y - l)+'px)');
+
+        //   context.translate(l, l);
+
+        //   context.save();
+        //   context.translate(-10000, -10000);
+        //   info.arg.pathShadowOn(context);
+
+        //   context.lineWidth = l;
+        //   context.lineCap = 'round';
+        //   context.shadowOffsetX = 10000;
+        //   context.shadowOffsetY = 10000;
+        //   context.shadowBlur = r;
+        //   context.shadowColor = '#fff';
+        //   context.stroke();
+        //   context.restore();
+
+        //   context.globalCompositeOperation = 'destination-out';
+        //   info.arg.pathShadowOn(context);
+        //   context.fill();
+        //   return;
       }
     },
 
@@ -1281,6 +1396,15 @@ function Visual(options) {
           return;
         case 'insert':
           info.script.insert(this.dragScript, info.block);
+          return;
+        case 'replace':
+          if (info.arg.isBlock) {
+            var pos = info.arg.workspacePosition;
+          }
+          info.block.replace(info.arg, this.dragScript.blocks[0]);
+          if (info.arg.isBlock) {
+            this.add(pos.x + 20, pos.y + 20, new Script().add(info.arg));
+          }
           return;
       }
     },
