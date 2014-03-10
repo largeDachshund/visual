@@ -293,10 +293,10 @@ function Visual(options) {
     get contextMenu() {
       return new Menu(
         'Duplicate',
-        'Delete',
+        ['Delete', this.destroy],
         Menu.line,
         'Help',
-        'Add Comment');
+        'Add Comment').withContext(this);
     },
 
     get dragObject() {return this},
@@ -366,6 +366,16 @@ function Visual(options) {
 
       return this;
     },
+    
+    destroy: function() {
+      if (!this.parent) return this;
+      if (this.parent.isScript) {
+        this.parent.remove(this);
+      } else if (this.parent.isBlock) {
+        this.parent.reset(this);
+      }
+      return this;
+    },
 
     reset: function(arg) {
       if (arg.parent !== this || !arg.isArg && !arg.isBlock) return this;
@@ -415,7 +425,7 @@ function Visual(options) {
     linePadding: 4,
     scriptPadding: 15,
     
-    minDistance: function (part) {
+    minDistance: function(part) {
       if (this.isBoolean) {
         return (
           part.isBlock && part.type === 'r' && !part.hasScript ? this.paddingX + part.height/4 | 0 :
@@ -546,7 +556,7 @@ function Visual(options) {
       this.drawOn(this.context);
     },
 
-    drawOn: function (context) {
+    drawOn: function(context) {
       context.fillStyle = this._color;
       bezel(context, this.pathBlock, this);
     },
@@ -1188,7 +1198,9 @@ function Visual(options) {
       var i = this.blocks.indexOf(block);
       this.blocks.splice(i, 1);
       this.el.removeChild(block.el);
-
+      
+      this.layout();
+      
       return this;
     },
 
@@ -1726,7 +1738,7 @@ function Visual(options) {
 
     this.items = [];
 
-    items = [].concat.apply([], arguments);
+    items = [].slice.call(arguments);
     if (typeof items[0] === 'function') {
       this.action = items.shift();
     }
@@ -1743,6 +1755,17 @@ function Visual(options) {
 
   Menu.prototype = {
     constructor: Menu,
+    
+    withAction: function(action, context) {
+      this.action = action;
+      this.context = context;
+      return this;
+    },
+    
+    withContext: function(context) {
+      this.context = context;
+      return this;
+    },
 
     add: function(item) {
       if (item === Menu.line) {
@@ -1793,8 +1816,11 @@ function Visual(options) {
     },
 
     commit: function(index) {
-      if (typeof this.action === 'function') {
-        this.action(this.items[index][1]);
+      var item = this.items[index];
+      if (typeof item[1] === 'function') {
+        item[1].call(this.context);
+      } else if (typeof this.action === 'function') {
+        this.action.call(this.context, item[1]);
       }
       this.hide();
     },
