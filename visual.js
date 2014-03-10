@@ -269,7 +269,7 @@ function Visual(options) {
         i++;
         if (parts[i]) {
           var old = args[this.args.length];
-          var arg = new Arg(parts[i], old && old.isBlock ? this.defaultArgs[this.args.length] : old);
+          var arg = old && old.isArg ? old : new Arg(parts[i], old && old.isBlock ? this.defaultArgs[this.args.length] : old);
           this.inputs.push(arg);
           this.add(old && old.isBlock ? old : arg);
           if (arg._type === 't') {
@@ -291,12 +291,19 @@ function Visual(options) {
     get workspacePosition() {return getWorkspacePosition(this)},
 
     get contextMenu() {
+      var workspace = this.workspace;
+      var pressX = workspace.pressX;
+      var pressY = workspace.pressY;
       return new Menu(
-        'Duplicate',
-        ['Delete', this.destroy],
+        ['Duplicate', function() {
+          var pos = this.workspacePosition;
+          workspace.grab(this.copyStack(), pos.x - pressX, pos.y - pressY);
+        }],
         Menu.line,
         'Help',
-        'Add Comment').withContext(this);
+        'Add Comment',
+        Menu.line,
+        ['Delete', this.destroy]).withContext(this);
     },
 
     get dragObject() {return this},
@@ -394,6 +401,16 @@ function Visual(options) {
       if (this.parent.isScript) {
         return this.parent.splitAt(this);
       }
+    },
+
+    copy: function() {
+      var args = this.args.map(function(a) {return a.copy()});
+      return new Block(this.name, args);
+    },
+
+    copyStack: function() {
+      if (!this.parent || !this.parent.isScript) return new Script().add(this.copy());
+      return this.parent.copyAt(this);
     },
 
     objectFromPoint: function(x, y) {
@@ -745,7 +762,7 @@ function Visual(options) {
           this.layout();
           return;
         case 'm':
-          this.field.textContent = value;
+          this.field.textContent = this._value = value;
           this.layout();
           return;
         case 't':
@@ -828,6 +845,11 @@ function Visual(options) {
 
     acceptsDropOf: function(b) {
       return 'cmt'.indexOf(this.type) === -1 && (this.type !== 'b' || b.isBoolean);
+    },
+
+    copy: function() {
+      var value = this.type === 't' ? this.script.copy() : this.value;
+      return new Arg([this.type, this.menu], value);
     },
 
     objectFromPoint: function(x, y) {
@@ -1204,6 +1226,20 @@ function Visual(options) {
       return this;
     },
 
+    copy: function() {
+      var script = new Script();
+      script.addScript({blocks: this.blocks.map(function(b) {return b.copy()})});
+      return script;
+    },
+
+    copyAt: function (b) {
+      var script = new Script();
+      var i = this.blocks.indexOf(b);
+      if (i === -1) return script;
+      script.addScript({blocks: this.blocks.slice(i).map(function(b) {return b.copy()})});
+      return script;
+    },
+
     objectFromPoint: function(x, y) {
       if (!containsPoint(this, x, y)) return null;
       var blocks = this.blocks;
@@ -1264,7 +1300,7 @@ function Visual(options) {
     this.el.addEventListener('mousedown', this.press.bind(this));
     this.el.addEventListener('contextmenu', this.blockContextMenu.bind(this));
     document.addEventListener('mousemove', this.drag.bind(this));
-    document.addEventListener('mouseup', this.drop.bind(this));
+    document.addEventListener('mouseup', this.mouseUp.bind(this));
 
     this.feedback = el('canvas', 'Visual-absolute Visual-feedback');
     this.feedbackContext = this.feedback.getContext('2d');
@@ -1348,6 +1384,7 @@ function Visual(options) {
     },
 
     press: function(e) {
+      this.drop();
       this.updateMouse(e);
       this.pressX = this.mouseX;
       this.pressY = this.mouseY;
@@ -1371,20 +1408,32 @@ function Visual(options) {
         this.updateFeedback();
         if (e) e.preventDefault();
       } else if (this.pressed && this.shouldDrag) {
-        this.dragging = true;
-        this.dragObject = this.pressObject.dragObject;
-
-        var pos = this.dragObject.workspacePosition;
-        this.dragX = pos.x - this.pressX;
-        this.dragY = pos.y - this.pressY;
-
-        this.dragScript = this.dragObject.detach();
-        this.dragScript.el.classList.add('Visual-script-dragging');
-        this.add(this.dragX + this.mouseX, this.dragY + this.mouseY, this.dragScript);
-        this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
-        this.updateFeedback();
+        var block = this.pressObject.dragObject;
+        var pos = block.workspacePosition;
+        this.grab(block.detach(), pos.x - this.pressX, pos.y - this.pressY);
         e.preventDefault();
       }
+    },
+
+    grab: function(script, offsetX, offsetY) {
+      if (this.dragging) {
+        this.drop();
+      }
+      this.dragging = true;
+
+      if (offsetX === undefined) {
+        var pos = script.workspacePosition;
+        offsetX = pos.x - this.pressX;
+        offsetY = pos.y - this.pressY;
+      }
+      this.dragX = offsetX;
+      this.dragY = offsetY;
+
+      this.dragScript = script;
+      this.dragScript.el.classList.add('Visual-script-dragging');
+      this.add(this.dragX + this.mouseX, this.dragY + this.mouseY, this.dragScript);
+      this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
+      this.updateFeedback();
     },
 
     updateFeedback: function() {
@@ -1609,17 +1658,10 @@ function Visual(options) {
       }
     },
 
-    drop: function(e) {
+    mouseUp: function(e) {
       this.updateMouse(e);
       if (this.dragging) {
-        if (this.feedbackInfo) this.applyDrop(this.feedbackInfo);
-
-        this.dragScript.el.classList.remove('Visual-script-dragging');
-        this.dragScript.removeShadow();
-        this.feedback.style.display = 'none';
-
-        this.dragScript = null;
-        this.layout();
+        this.drop();
       } else if (this.shouldDrag) {
         if (this.pressObject.isArg) {
           if (this.pressObject._type === 'm') {
@@ -1631,6 +1673,18 @@ function Visual(options) {
       }
       this.dragging = false;
       this.pressed = false;
+    },
+
+    drop: function() {
+      if (!this.dragging) return;
+      if (this.feedbackInfo) this.applyDrop(this.feedbackInfo);
+
+      this.dragScript.el.classList.remove('Visual-script-dragging');
+      this.dragScript.removeShadow();
+      this.feedback.style.display = 'none';
+
+      this.dragScript = null;
+      this.layout();
     },
 
     applyDrop: function(info) {
