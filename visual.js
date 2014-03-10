@@ -414,6 +414,21 @@ function Visual(options) {
     partPadding: 4,
     linePadding: 4,
     scriptPadding: 15,
+    
+    minDistance: function (part) {
+      if (this.isBoolean) {
+        return (
+          part.isBlock && part.type === 'r' && !part.hasScript ? this.paddingX + part.height/4 | 0 :
+          part.type !== 'b' ? this.paddingX + part.height/2 | 0 :
+          0);
+      }
+      if (this.isReporter) {
+        return (
+          part.isArg && (part._type === 'd' || part._type === 'n') || part.isReporter && !part.hasScript ? 0 :
+          (part.height)/2 | 0);
+      }
+      return 0;
+    },
 
     layoutSelf: function() {
       var xp = this.paddingX;
@@ -423,8 +438,6 @@ function Visual(options) {
       var sp = this.scriptPadding;
       var cmw = this.puzzle * 2 + this.puzzleInset + this.puzzleWidth;
       var command = this.type === 'c';
-      var reporter = this.type === 'r';
-      var bool = this.type === 'b';
 
       var lines = [[]];
       var lineXs = [[0]];
@@ -452,13 +465,11 @@ function Visual(options) {
           scriptWidth = Math.max(scriptWidth, sp + part.script.width);
           line += 2;
         } else {
-          var mw =
-            command ? (part.isBlock || part.isArg ? cmw : 0) :
-            bool ? (part.isBlock && part.type === 'r' ? xp + part.height/4 | 0 : part.type !== 'b' ? xp + part.height/2 | 0 : 0) :
-            reporter ? (part.isArg && (part._type === 'd' || part._type === 'n') || part.isReporter && !part.hasScript ? 0 : xp + part.height/4 | 0) : 0;
+          var md = command ? 0 : this.minDistance(part);
+          var mw = command ? (part.isBlock || part.isArg ? cmw : 0) : md;
           if (mw && !line && lineX < mw - xp) lineX = lineXs[line][lineXs[line].length-1] = mw - xp;
           lineX += part.width;
-          width = Math.max(width, lineX);
+          width = Math.max(width, lineX + Math.max(0, md - xp));
           lineX += pp;
           lineXs[line].push(lineX);
           lineHeights[line] = Math.max(lineHeights[line], part.height);
