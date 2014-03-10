@@ -421,16 +421,19 @@ function Visual(options) {
       var pp = this.partPadding;
       var lp = this.linePadding;
       var sp = this.scriptPadding;
-      var mw = this.puzzle * 2   + this.puzzleInset + this.puzzleWidth;
+      var cmw = this.puzzle * 2 + this.puzzleInset + this.puzzleWidth;
       var command = this.type === 'c';
+      var reporter = this.type === 'r';
+      var bool = this.type === 'b';
 
       var lines = [[]];
-      var lineWidths = [0];
+      var lineXs = [[0]];
       var lineHeights = [0];
       var loop = null;
 
       var line = 0;
       var width = 0;
+      var lineX = 0;
       var scriptWidth = 0;
 
       var parts = this.parts;
@@ -443,14 +446,21 @@ function Visual(options) {
         }
         if (part.isArg && part._type === 't') {
           lines.push([part], []);
-          lineWidths.push(part.width, 0);
+          lineXs.push([0], []);
           lineHeights.push(part.height, 0);
+          lineX = 0;
           scriptWidth = Math.max(scriptWidth, sp + part.script.width);
           line += 2;
         } else {
-          if (command && !line && (part.isBlock || part.isArg) && lineWidths[line] < mw - pp - xp) lineWidths[line] = mw - pp - xp;
-          lineWidths[line] += (lineWidths[line] && pp) + part.width;
-          width = Math.max(width, lineWidths[line]);
+          var mw =
+            command ? (part.isBlock || part.isArg ? cmw : 0) :
+            bool ? (part.isBlock && part.type === 'r' ? xp + part.height/4 | 0 : part.type !== 'b' ? xp + part.height/2 | 0 : 0) :
+            reporter ? (part.isArg && (part._type === 'd' || part._type === 'n') || part.isBlock && part.type === 'r' && !part.hasScript ? 0 : xp + part.height/4 | 0) : 0;
+          if (mw && !line && lineX < mw - xp) lineX = lineXs[line][lineXs[line].length-1] = mw - xp;
+          lineX += part.width;
+          width = Math.max(width, lineX);
+          lineX += pp;
+          lineXs[line].push(lineX);
           lineHeights[line] = Math.max(lineHeights[line], part.height);
           lines[line].push(part);
         }
@@ -466,15 +476,13 @@ function Visual(options) {
       for (i = 0; i < length; i++) {
         var line = lines[i];
         var lh = lineHeights[i];
+        var xs = lineXs[i];
         if (line[0] && line[0]._type === 't') {
           line[0].moveTo(sp, y);
         } else {
-          var x = xp;
           for (var j = 0, l = line.length; j < l; j++) {
             var p = line[j];
-            if (command && !i && (p.isArg || p.isBlock) && x < mw) x = mw;
-            p.moveTo(x, y + ((lh - p.height) / 2 | 0));
-            x += p.width + pp;
+            p.moveTo(xp + xs[j], y + ((lh - p.height) / 2 | 0));
           }
         }
         y += lh + lp;
