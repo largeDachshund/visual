@@ -36,17 +36,28 @@ function Visual(options) {
   }
 
   function layoutNoChildren() {
-    this.layoutSelf();
+    if (this.dirty) {
+      this.dirty = false;
+      this.layoutSelf();
+    }
+  }
+
+  function moveTo(x, y) {
+    if (this.x === x && this.y === y) return;
+    this.x = x;
+    this.y = y;
+    setTransform(this.el, 'translate('+x+'px,'+y+'px)');
   }
 
   function getWorkspacePosition(o) {
-    var ws = o.workspace.el;
-    var wb = ws.getBoundingClientRect();
-    var ob = o.el.getBoundingClientRect();
-    return {
-      x: ob.left - wb.left | 0,
-      y: ob.top - wb.top | 0
-    };
+    var x = 0;
+    var y = 0;
+    while (o && !o.isWorkspace) {
+      x += o.x;
+      y += o.y;
+      o = o.parent;
+    }
+    return {x: x, y: y};
   }
 
   function containsPoint(extent, x, y) {
@@ -108,10 +119,31 @@ function Visual(options) {
     context.restore();
   }
 
+  function metrics(className) {
+    var field = el('Visual-metrics ' + className);
+    var node = document.createTextNode('');
+    field.appendChild(node);
+    document.body.appendChild(field);
+
+    var hasOwnProperty = Object.prototype.hasOwnProperty;
+    var stringCache = Object.create(null);
+
+    return function measure(text) {
+      if (hasOwnProperty.call(stringCache, text)) {
+        return stringCache[text];
+      }
+      node.data = text + '\u200C';
+      return stringCache[text] = {
+        width: field.offsetWidth,
+        height: field.offsetHeight
+      };
+    };
+  }
+
 
   function Block(info, args) {
-    this.el = el('Visual-block');
-    this.el.appendChild(this.canvas = el('canvas', 'Visual-canvas'));
+    this.el = el('Visual-absolute');
+    this.el.appendChild(this.canvas = el('canvas', 'Visual-absolute'));
     this.context = this.canvas.getContext('2d');
 
     if (typeof info === 'string') info = options.getBlock(info);
@@ -126,6 +158,7 @@ function Visual(options) {
     this.name = info[2];
     this.type = info[0];
     this.isHat = this.type === 'h';
+    this.hasPuzzle = this.type === 'c' || this.type === 'h';
     this.isFinal = this.type === 'f';
     this.isReporter = this.type === 'r' || this.type === 'b';
     this.isBoolean = this.type === 'b';
@@ -140,19 +173,14 @@ function Visual(options) {
   Block.prototype = {
     constructor: Block,
 
-    blockClasses: {
-      c: 'Visual-command Visual-puzzled Visual-block',
-      f: 'Visual-command Visual-block',
-      r: 'Visual-part Visual-block Visual-reporter',
-      b: 'Visual-part Visual-block Visual-reporter Visual-boolean-reporter'
-    },
-
     isArg: false,
     isBlock: true,
+    isIcon: false,
     isScript: false,
     isWorkspace: false,
 
     parent: null,
+    dirty: true,
 
     radius: 4,
     puzzle: 3,
@@ -168,7 +196,7 @@ function Visual(options) {
       },
       r: function(context) {
         var w = this.ownWidth;
-        var h = this.height;
+        var h = this.ownHeight;
         var r = Math.min(w, (this.hasScript ? 15 : h)) / 2;
 
         context.moveTo(0, r);
@@ -179,7 +207,7 @@ function Visual(options) {
       },
       b: function(context) {
         var w = this.ownWidth;
-        var h = this.height;
+        var h = this.ownHeight;
         var r = Math.min(h, w) / 2;
 
         context.moveTo(0, r);
@@ -197,7 +225,7 @@ function Visual(options) {
       var pi = this.puzzleInset;
       var pw = this.puzzleWidth;
       var w = this.ownWidth;
-      var h = this.height - bottom * p;
+      var h = this.ownHeight - bottom * p;
       context.moveTo(0, r);
       context.arc(r, r, r, PI, PI32, false);
       context.lineTo(pi, 0);
@@ -252,13 +280,6 @@ function Visual(options) {
       }
     },
 
-    get type() {return this._type},
-    set type(value) {
-      this._type = value;
-
-      this.el.className = this.blockClasses[value];
-    },
-
     get color() {return this._color},
     set color(value) {
       this._color = value;
@@ -300,8 +321,10 @@ function Visual(options) {
         this.labels.push(part);
       }
 
-      this.el.appendChild(part.el);
+      if (this.parent) part.layoutChildren();
       this.layout();
+
+      this.el.appendChild(part.el);
 
       return this;
     },
@@ -367,38 +390,111 @@ function Visual(options) {
       var args = this.args;
       for (var i = args.length; i--;) {
         var arg = args[i];
-        var o = arg.objectFromPoint(x - arg.el.offsetLeft, y - arg.el.offsetTop);
+        var o = arg.objectFromPoint(x - arg.x, y - arg.y);
         if (o) return o;
       }
       return transparentAt(this.context, x, y) ? this : null;
     },
 
+    moveTo: moveTo,
     layout: layout,
 
     layoutChildren: function() {
       this.parts.forEach(function(p) {
         p.layoutChildren();
       });
-      this.layoutSelf();
+      if (this.dirty) {
+        this.dirty = false;
+        this.layoutSelf();
+      }
     },
 
-    layoutSelf: function() {
-      this.ownWidth = this.width = this.el.offsetWidth;
-      this.height = this.el.offsetHeight;
+    paddingX: 5,
+    paddingY: 3,
+    partPadding: 4,
+    linePadding: 4,
+    scriptPadding: 15,
 
-      var args = this.args;
-      for (var i = args.length; i--;) {
-        var arg = args[i];
-        if (arg._type === 't') {
-          this.width = Math.max(this.width, arg.el.offsetLeft + arg.script.width);
+    layoutSelf: function() {
+      var xp = this.paddingX;
+      var yp = this.paddingY;
+      var pp = this.partPadding;
+      var lp = this.linePadding;
+      var sp = this.scriptPadding;
+      var mw = this.puzzle * 2   + this.puzzleInset + this.puzzleWidth;
+      var command = this.type === 'c';
+
+      var lines = [[]];
+      var lineWidths = [0];
+      var lineHeights = [0];
+      var loop = null;
+
+      var line = 0;
+      var width = 0;
+      var scriptWidth = 0;
+
+      var parts = this.parts;
+      var length = parts.length;
+      for (var i = 0; i < length; i++) {
+        var part = parts[i];
+        if (part.isIcon && part.name === 'loop') {
+          loop = part;
+          continue;
+        }
+        if (part.isArg && part._type === 't') {
+          lines.push([part], []);
+          lineWidths.push(part.width, 0);
+          lineHeights.push(part.height, 0);
+          scriptWidth = Math.max(scriptWidth, sp + part.script.width);
+          line += 2;
+        } else {
+          if (command && !line && (part.isBlock || part.isArg) && lineWidths[line] < mw - pp - xp) lineWidths[line] = mw - pp - xp;
+          lineWidths[line] += (lineWidths[line] && pp) + part.width;
+          width = Math.max(width, lineWidths[line]);
+          lineHeights[line] = Math.max(lineHeights[line], part.height);
+          lines[line].push(part);
         }
       }
+
+      if (!lines[line].length) {
+        lineHeights[line] = 8;
+      }
+      width += xp * 2;
+
+      var y = yp;
+      length = lines.length;
+      for (i = 0; i < length; i++) {
+        var line = lines[i];
+        var lh = lineHeights[i];
+        if (line[0] && line[0]._type === 't') {
+          line[0].moveTo(sp, y);
+        } else {
+          var x = xp;
+          for (var j = 0, l = line.length; j < l; j++) {
+            var p = line[j];
+            if (command && !i && (p.isArg || p.isBlock) && x < mw) x = mw;
+            p.moveTo(x, y + ((lh - p.height) / 2 | 0));
+            x += p.width + pp;
+          }
+        }
+        y += lh + lp;
+      }
+      var height = y - lp + yp;
+
+      if (loop) {
+        loop.moveTo(width - loop.width - 2, height - loop.height - 3);
+      }
+
+      this.ownWidth = width;
+      this.ownHeight = height + (this.hasPuzzle ? this.puzzle : 0);
+      this.width = Math.max(width, scriptWidth);
+      this.height = height;
 
       this.draw();
     },
 
     pathBlock: function(context) {
-      this.pathBlockType[this._type].call(this, context);
+      this.pathBlockType[this.type].call(this, context);
       context.closePath();
       var w = this.ownWidth;
       var r = this.radius;
@@ -407,8 +503,8 @@ function Visual(options) {
       var pw = this.puzzleWidth;
       this.args.forEach(function(a) {
         if (a._type === 't') {
-          var x = a.el.offsetLeft;
-          var y = a.el.offsetTop;
+          var x = a.x;
+          var y = a.y;
           var h = a.height;
           context.moveTo(x + r, y);
           context.arc(x + r, y + r, r, PI32, PI, true);
@@ -426,7 +522,7 @@ function Visual(options) {
 
     draw: function() {
       this.canvas.width = this.ownWidth;
-      this.canvas.height = this.height;
+      this.canvas.height = this.ownHeight;
 
       this.drawOn(this.context);
     },
@@ -441,7 +537,7 @@ function Visual(options) {
       this.args.forEach(function(a) {
         if (a._type === 't') {
           context.save();
-          context.translate(a.el.offsetLeft, a.el.offsetTop);
+          context.translate(a.x, a.y);
           a.script.pathShadowOn(context);
           context.restore();
         }
@@ -451,25 +547,34 @@ function Visual(options) {
 
 
   function Label(text) {
-    this.el = el('Visual-part Visual-label');
+    this.el = el('Visual-absolute Visual-label');
 
     this.text = text;
   }
+
+  Label.measure = metrics('Visual-label');
 
   Label.prototype = {
     constructor: Label,
 
     isArg: false,
     isBlock: false,
+    isIcon: false,
     isScript: false,
     isWorkspace: false,
 
+    x: 0,
+    y: 0,
     parent: null,
+    dirty: false,
 
     get text() {return this._text},
     set text(value) {
       this.el.textContent = value;
       this._text = value;
+      var metrics = Label.measure(value);
+      this.width = metrics.width;
+      this.height = metrics.height;
     },
 
     get workspace() {return this.parent && this.parent.workspace},
@@ -479,12 +584,14 @@ function Visual(options) {
 
     layoutSelf: function() {},
     layoutChildren: layoutNoChildren,
-    layout: layout
+    layout: layout,
+    moveTo: moveTo
   };
 
 
   function Icon(name) {
-    this.el = el('Visual-part');
+    this.el = el('canvas', 'Visual-absolute');
+    this.context = this.el.getContext('2d');
     this.name = name;
   }
 
@@ -493,16 +600,12 @@ function Visual(options) {
 
     isArg: false,
     isBlock: false,
+    isIcon: true,
     isScript: false,
     isWorkspace: false,
 
     parent: null,
-
-    get name() {return this._name},
-    set name(value) {
-      this.el.className = 'Visual-part Visual-icon-'+value;
-      this._name = value;
-    },
+    dirty: true,
 
     get workspace() {return this.parent && this.parent.workspace},
     get workspacePosition() {return getWorkspacePosition(this)},
@@ -510,16 +613,12 @@ function Visual(options) {
     get dragObject() {return this.parent.dragObject},
 
     layoutSelf: function() {
-      if (this.canvas) {
-        this.el.removeChild(this.canvas);
-        this.canvas = undefined;
-      }
-      if (this.name) {
-        this.el.appendChild(this.canvas = el('canvas', 'Visual-canvas'));
-        this.canvas.width = 14;
-        this.canvas.height = 11;
+      var canvas = this.el;
+      var context = this.context;
+      if (this.name === 'loop') {
+        canvas.width = 14;
+        canvas.height = 11;
 
-        var context = this.canvas.getContext('2d');
         this.pathLoopArrow(context);
         context.fillStyle = 'rgba(0, 0, 0, .3)';
         context.fill();
@@ -529,10 +628,17 @@ function Visual(options) {
         context.fillStyle = 'rgba(255, 255, 255, .9)';
         context.fill();
 
+      } else {
+        canvas.width = 0;
+        canvas.height = 0;
       }
+
+      this.width = canvas.width;
+      this.height = canvas.height;
     },
     layoutChildren: layoutNoChildren,
     layout: layout,
+    moveTo: moveTo,
 
     pathLoopArrow: function(context) {
       // m 1,11 8,0 2,-2 0,-3 3,0 -4,-5 -4,5 3,0 0,3 -8,0 z
@@ -553,8 +659,8 @@ function Visual(options) {
 
 
   function Arg(info, value) {
-    this.el = el();
-    this.el.appendChild(this.canvas = el('canvas', 'Visual-canvas'));
+    this.el = el('Visual-absolute');
+    this.el.appendChild(this.canvas = el('canvas', 'Visual-absolute'));
     this.context = this.canvas.getContext('2d');
 
     if (typeof info === 'string') info = info.split('.');
@@ -564,18 +670,10 @@ function Visual(options) {
     if (value != null) this.value = value;
   }
 
+  Arg.measure = metrics('Visual-field');
+
   Arg.prototype = {
     constructor: Arg,
-
-    argClasses: {
-      b: 'Visual-part',
-      c: 'Visual-part Visual-color-arg',
-      d: 'Visual-part Visual-field-arg Visual-numeric-arg Visual-with-menu',
-      m: 'Visual-part Visual-enum-arg',
-      n: 'Visual-part Visual-field-arg Visual-numeric-arg',
-      s: 'Visual-part Visual-field-arg Visual-string-arg',
-      t: 'Visual-script-arg',
-    },
 
     pathArgType: {
       b: 'pathBooleanShape',
@@ -588,10 +686,12 @@ function Visual(options) {
 
     isArg: true,
     isBlock: false,
+    isIcon: false,
     isScript: false,
     isWorkspace: false,
 
     parent: null,
+    dirty: true,
 
     get value() {
       switch (this._type) {
@@ -613,22 +713,28 @@ function Visual(options) {
         case 'n':
         case 's':
           this.field.value = value;
+          this.layout();
           return;
         case 'm':
           this.field.textContent = value;
+          this.layout();
           return;
         case 't':
           if (value.isScript) {
-            this.el.removeChild(this.script);
+            this.el.removeChild(this.script.el);
             this.script.parent = null;
             this.script = value;
             value.parent = this;
             this.el.appendChild(value.el);
+            this.layout();
           } else {
+            var script = new Script();
             value.forEach(function(v) {
-              this.script.add(v);
+              script.add(v);
             }, this);
+            this.value = script;
           }
+          return;
       }
     },
 
@@ -636,14 +742,15 @@ function Visual(options) {
     set type(value) {
       this._type = value;
 
-      this.el.className = this.argClasses[value];
-
-      this.el.textContent = '';
+      while (this.el.firstChild) {
+        this.el.removeChild(this.el.lastChild);
+      }
+      this.isTextArg = false;
 
       var arrow;
       switch (value) {
         case 'c':
-          this.field = el('input', 'Visual-field Visual-color-field');
+          this.field = el('input', 'Visual-absolute Visual-field Visual-color-field');
           this.field.type = 'color';
           this.field.value = randColor();
           this.field.addEventListener('input', this.draw.bind(this));
@@ -653,12 +760,13 @@ function Visual(options) {
           // fall through
         case 'n':
         case 's':
-          this.field = el('input', 'Visual-field Visual-text-field');
+          this.field = el('input', 'Visual-absolute Visual-field Visual-text-field');
           this.field.addEventListener('input', this.layout.bind(this));
+          this.isTextArg = true;
           break;
         case 'm':
           arrow = true;
-          this.field = el('Visual-field Visual-enum-field');
+          this.field = el('Visual-absolute Visual-field Visual-enum-field');
           break;
         case 't':
           this.script = new Script();
@@ -672,7 +780,7 @@ function Visual(options) {
       }
       if (this.field) this.el.appendChild(this.field);
       if (arrow) {
-        this.arrow = el('canvas', 'Visual-arrow');
+        this.arrow = el('canvas', 'Visual-absolute');
         this.drawArrow();
         this.el.appendChild(this.arrow);
       }
@@ -741,10 +849,10 @@ function Visual(options) {
       var w = this.width;
       var h = this.height;
 
-      context.moveTo(0, .5);
-      context.lineTo(w, .5);
-      context.lineTo(w, h-.5);
-      context.lineTo(0, h-.5);
+      context.moveTo(0, 0);
+      context.lineTo(w, 0);
+      context.lineTo(w, h);
+      context.lineTo(0, h);
     },
 
     pathBooleanShape: function(context) {
@@ -790,13 +898,18 @@ function Visual(options) {
         this.color = '#' + '000000'.slice(s.length) + s;
       }
       switch (this._type) {
-        case 's':
+        case 'd':
         case 'm':
         case 'n':
-        case 'd':
-          this.width = Math.max(6, measureArg(this._type === 'm' ? this.field.textContent : this.field.value)) + 9 + (this.arrow ? this.arrow.width + 1 : 0);
-          this.height = this.field.offsetHeight;
+        case 's':
+          var metrics = Arg.measure(this._type === 'm' ? this.field.textContent : this.field.value);
+          this.width = Math.max(6, metrics.width) + 8 + (this.arrow ? this.arrow.width + 1 : 0);
+          this.height = metrics.height + 2;
           this.field.style.width = this.width + 'px';
+          this.field.style.height = this.height + 'px';
+          if (this.arrow) {
+            setTransform(this.arrow, 'translate('+(this.width - this.arrow.width - 3)+'px, '+((this.height - this.arrow.height) / 2 | 0)+'px)');
+          }
           break;
         case 't':
           this.width = 0;
@@ -812,37 +925,23 @@ function Visual(options) {
           break;
       }
 
-      this.el.style.width = this.width+'px';
-      this.el.style.height = this.height+'px';
-
       this.draw();
     },
 
-    layoutChildren: layoutNoChildren,
-    layout: layout
-  };
-
-  var measureArg = function() {
-    var field = el('Visual-field Visual-field-measure');
-    var node = document.createTextNode('');
-    field.appendChild(node);
-    document.body.appendChild(field);
-
-    var hasOwnProperty = Object.prototype.hasOwnProperty;
-    var stringCache = Object.create(null);
-
-    return function measureArg(text) {
-      if (hasOwnProperty.call(stringCache, text)) {
-        return stringCache[text];
+    layoutChildren: function() {
+      if (this._type === 't') this.script.layoutChildren();
+      if (this.dirty) {
+        this.dirty = false;
+        this.layoutSelf();
       }
-      node.data = text;
-      return stringCache[text] = field.offsetWidth + 1;
-    };
-  }();
+    },
+    layout: layout,
+    moveTo: moveTo
+  };
 
 
   function Script() {
-    this.el = el('Visual-script');
+    this.el = el('Visual-absolute Visual-script');
 
     this.blocks = [];
     this.x = 0;
@@ -856,10 +955,12 @@ function Visual(options) {
 
     isArg: false,
     isBlock: false,
+    isIcon: false,
     isScript: true,
     isWorkspace: false,
 
     parent: null,
+    dirty: true,
 
     get workspace() {return this.parent && this.parent.workspace},
     get workspacePosition() {return getWorkspacePosition(this)},
@@ -870,7 +971,7 @@ function Visual(options) {
     get isReporter() {return this.blocks.length && this.blocks[0].isReporter},
 
     shadow: function(blur, color) {
-      var canvas = el('canvas', 'Visual-canvas');
+      var canvas = el('canvas', 'Visual-absolute');
       canvas.width = this.width + blur * 2;
       canvas.height = this.height + blur * 2;
 
@@ -913,10 +1014,9 @@ function Visual(options) {
       var y = 0;
       for (var i = 0; i < length; i++) {
         var b = blocks[i];
-        var ny = b.el.offsetTop;
-        context.translate(0, ny - y);
+        context.translate(0, b.y - y);
         b.pathShadowOn(context);
-        y = ny;
+        y = b.y;
       }
       context.restore();
     },
@@ -928,9 +1028,24 @@ function Visual(options) {
       var blocks = this.blocks;
       var i = blocks.indexOf(topBlock);
 
-      while (i < blocks.length) {
-        script.add(blocks[i]);
+      if (i === 0) {
+        if (this.parent.isArg) this.parent.value = script;
+        return this;
       }
+
+      script.blocks = blocks.slice(i);
+      this.blocks = blocks.slice(0, i);
+
+      var f = document.createDocumentFragment();
+
+      var length = blocks.length;
+      for (;i < length; i++) {
+        var b = blocks[i];
+        b.parent = script;
+        f.appendChild(b.el);
+      }
+
+      script.el.appendChild(f);
 
       this.layout();
       return script;
@@ -946,10 +1061,11 @@ function Visual(options) {
 
       block.parent = this;
       this.blocks.push(block);
-      this.el.appendChild(block.el);
 
       if (this.parent) block.layoutChildren();
       this.layout();
+
+      this.el.appendChild(block.el);
 
       return this;
     },
@@ -1058,7 +1174,7 @@ function Visual(options) {
       var blocks = this.blocks;
       for (var i = blocks.length; i--;) {
         var block = blocks[i];
-        var o = block.objectFromPoint(x, y - block.el.offsetTop);
+        var o = block.objectFromPoint(x, y - block.y);
         if (o) return o;
       }
       return null;
@@ -1068,26 +1184,31 @@ function Visual(options) {
       this.blocks.forEach(function(b) {
         b.layoutChildren();
       });
-      this.layoutSelf();
+      if (this.dirty) {
+        this.dirty = false;
+        this.layoutSelf();
+      }
     },
 
     layout: layout,
 
     layoutSelf: function() {
-      this.width = 0;
-      this.height = this.el.offsetHeight;
-
       var blocks = this.blocks;
-      for (var i = blocks.length; i--;) {
-        this.width = Math.max(this.width, blocks[i].width);
+      var length = blocks.length;
+      var y = 0;
+      var w = 0;
+      for (var i = 0; i < length; i++) {
+        var b = blocks[i];
+        b.moveTo(0, y);
+        w = Math.max(w, b.width);
+        y += b.height;
       }
+
+      this.width = w;
+      this.height = y;
     },
 
-    moveTo: function(x, y) {
-      this.x = x;
-      this.y = y;
-      setTransform(this.el, 'translate('+x+'px,'+y+'px)');
-    }
+    moveTo: moveTo
   };
 
 
@@ -1095,13 +1216,22 @@ function Visual(options) {
     this.el = host;
     this.el.className += ' Visual-workspace';
 
-    this.el.appendChild(this.fill = el('Visual-fill'));
+//     this.fill = el('Visual-absolute');
+//     this.fillX.style.height = '1px';
+//     this.el.appendChild(this.fillX);
+
+//     this.fillY = el('Visual-absolute');
+//     this.fillY.style.width = '1px';
+//     this.el.appendChild(this.fillY);
+
+    this.el.appendChild(this.fill = el('Visual-absolute'));
+
     this.el.addEventListener('mousedown', this.press.bind(this));
     this.el.addEventListener('contextmenu', this.blockContextMenu.bind(this));
     document.addEventListener('mousemove', this.drag.bind(this));
     document.addEventListener('mouseup', this.drop.bind(this));
 
-    this.feedback = el('canvas', 'Visual-canvas Visual-feedback');
+    this.feedback = el('canvas', 'Visual-absolute Visual-feedback');
     this.feedbackContext = this.feedback.getContext('2d');
     this.feedback.style.display = 'none';
     this.el.appendChild(this.feedback);
@@ -1123,6 +1253,7 @@ function Visual(options) {
 
     isArg: false,
     isBlock: false,
+    isIcon: false,
     isScript: false,
     isWorkspace: true,
 
@@ -1135,14 +1266,16 @@ function Visual(options) {
     get workspacePosition() {return {x: 0, y: 0}},
 
     add: function(x, y, script) {
+      if (script.parent) script.parent.remove(script);
+
       script.parent = this;
       this.scripts.push(script);
 
       script.moveTo(x, y);
-      this.el.appendChild(script.el);
-
       script.layoutChildren();
       this.layout();
+
+      this.el.appendChild(script.el);
 
       return this;
     },
@@ -1185,7 +1318,7 @@ function Visual(options) {
       this.pressY = this.mouseY;
       this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
 
-      this.shouldDrag = e.button === 0 && this.pressObject && !(this.pressObject.isArg && this.pressObject.field && document.activeElement === this.pressObject.field);
+      this.shouldDrag = e.button === 0 && this.pressObject && !(this.pressObject.isTextArg && document.activeElement === this.pressObject.field);
       if (e.button === 2) {
         e.preventDefault();
         var cm = (this.pressObject || this).contextMenu;
@@ -1221,7 +1354,7 @@ function Visual(options) {
 
     updateFeedback: function() {
       this.resetFeedback();
-      if (this.dragScript.blocks[0].isReporter) {
+      if (this.dragScript.isReporter) {
         this.showReporterFeedback();
       } else {
         this.showCommandFeedback();
@@ -1275,15 +1408,15 @@ function Visual(options) {
     },
 
     addBlockCommandFeedback: function(x, y, block, isTop) {
-      y += block.el.offsetTop;
+      y += block.y;
       var args = block.args;
       var length = args.length;
       for (var i = 0; i < length; i++) {
         var a = args[i];
         if (a.isBlock) {
-          this.addBlockCommandFeedback(x + a.el.offsetLeft, y + a.el.offsetTop, a);
+          this.addBlockCommandFeedback(x + a.x, y + a.y, a);
         } else if (a._type === 't') {
-          this.addScriptCommandFeedback(x + a.el.offsetLeft, y + a.el.offsetTop, a.script);
+          this.addScriptCommandFeedback(x + a.x, y + a.y, a.script);
         }
       }
       if (isTop && block.isHat || !isTop && this.commandHasHat || this.commandHasFinal || block.isReporter) return;
@@ -1319,14 +1452,14 @@ function Visual(options) {
     },
 
     addBlockReporterFeedback: function(x, y, block) {
-      x += block.el.offsetLeft;
-      y += block.el.offsetTop;
+      x += block.x;
+      y += block.y;
       var args = block.args;
       var length = args.length;
       for (var i = 0; i < length; i++) {
         var a = args[i];
-        var ax = x + a.el.offsetLeft;
-        var ay = y + a.el.offsetTop;
+        var ax = x + a.x;
+        var ay = y + a.y;
         if (a._type === 't') {
           this.addScriptReporterFeedback(ax, ay, a.script);
         } else {
@@ -1520,6 +1653,7 @@ function Visual(options) {
       var scripts = this.scripts;
       for (var i = scripts.length; i--;) {
         var script = scripts[i];
+        if (script === this.dragScript) return;
         if (script.blocks.length === 0) {
           this.remove(script);
           continue;

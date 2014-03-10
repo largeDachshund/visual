@@ -1,3 +1,19 @@
+.Visual-absolute {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.Visual-metrics {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  white-space: pre;
+  padding: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
 /* Workspace */
 
 .Visual-workspace {
@@ -15,18 +31,6 @@ body.Visual-workspace {
   margin: 0;
 }
 
-.Visual-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.Visual-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
 .Visual-feedback {
   z-index: 1;
 }
@@ -34,12 +38,8 @@ body.Visual-workspace {
 /* Script */
 
 .Visual-script {
-  position: absolute;
-  top: 0;
-  left: 0;
   white-space: nowrap;
   pointer-events: none;
-  line-height: 1px;
 }
 
 .Visual-script-dragging {
@@ -48,11 +48,7 @@ body.Visual-workspace {
 
 /* Block */
 
-.Visual-block {
-  position: relative;
-}
-
-.Visual-command {
+/*.Visual-command {
   display: block;
   float: left;
   clear: both;
@@ -87,11 +83,11 @@ body.Visual-workspace {
 .Visual-boolean-reporter > .Visual-string-arg:last-child,
 .Visual-boolean-reporter > .Visual-color-arg:last-child {
   margin-right: 9px;
-}
+}*/
 
 /* Arg */
 
-.Visual-part {
+/*.Visual-part {
   display: inline-block;
   position: relative;
   vertical-align: middle;
@@ -108,15 +104,6 @@ body.Visual-workspace {
   margin-bottom: 1px;
 }
 
-.Visual-field {
-  position: absolute;
-  color: #555;
-  font: 400 10px/1.2 Helvetica Neue, Helvetica, Arial, sans-serif;
-}
-.Visual-field:focus {
-  pointer-events: auto;
-}
-
 .Visual-script-arg {
   margin: 3px 0 3px 10px;
   display: block;
@@ -130,46 +117,44 @@ body.Visual-workspace {
 .Visual-color-arg {
   margin-top: 2px;
   margin-bottom: 2px;
-}
+}*/
+
 .Visual-color-field {
   opacity: 0;
-  width: 13px;
-  height: 13px;
-  padding: 0;
-  margin: 0;
-  border: 0;
   pointer-events: auto;
 }
 
 .Visual-field {
-  padding: .1em 4px .2em 5px;
+  color: #555;
+  font: 400 11px Helvetica Neue, Helvetica, Arial, sans-serif;
+  /*padding: .1em 4px .2em 5px;
   height: 1.5em;
   box-sizing: border-box;
-  -moz-box-sizing: border-box;
+  -moz-box-sizing: border-box;*/
   margin: 0;
+  padding: 0;
   border: 0;
   background: 0;
   outline: 0;
 }
+.Visual-field:focus {
+  pointer-events: auto;
+}
+
+.Visual-text-field,
+.Visual-enum-field {
+  padding: 0 4px;
+}
 
 .Visual-enum-field {
-  padding: .1em 5px .2em 4px;
   color: #fff;
 }
 
-.Visual-arrow {
+/* .Visual-arrow {
   position: absolute;
   right: 4px;
   top: 6px;
-}
-
-.Visual-field-measure {
-  position: absolute;
-  top: -10000px;
-  left: -10000px;
-  white-space: pre;
-  padding: 0;
-}
+} */
 
 /* Label */
 
@@ -181,14 +166,14 @@ body.Visual-workspace {
 
 /* Icon */
 
-.Visual-icon-loop {
+/*.Visual-icon-loop {
   position: absolute;
   width: 14px;
   height: 11px;
   bottom: 6px;
   right: 2px;
   margin: 0;
-}
+}*/
 
 /* Menu */
 
