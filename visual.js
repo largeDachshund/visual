@@ -1432,12 +1432,13 @@ function Visual(options) {
 
     addBlockCommandFeedback: function(x, y, block, isTop) {
       y += block.y;
+      x += block.x;
       var args = block.args;
       var length = args.length;
       for (var i = 0; i < length; i++) {
         var a = args[i];
         if (a.isBlock) {
-          this.addBlockCommandFeedback(x + a.x, y + a.y, a);
+          this.addBlockCommandFeedback(x, y, a);
         } else if (a._type === 't') {
           this.addScriptCommandFeedback(x + a.x, y + a.y, a.script);
         }
