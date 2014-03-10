@@ -297,7 +297,7 @@ function Visual(options) {
       return new Menu(
         ['Duplicate', function() {
           var pos = this.workspacePosition;
-          workspace.grab(this.copyStack(), pos.x - pressX, pos.y - pressY);
+          workspace.grab(this.scriptCopy(), pos.x - pressX, pos.y - pressY);
         }],
         Menu.line,
         'Help',
@@ -408,7 +408,7 @@ function Visual(options) {
       return new Block(this.name, args);
     },
 
-    copyStack: function() {
+    scriptCopy: function() {
       if (!this.parent || !this.parent.isScript) return new Script().add(this.copy());
       return this.parent.copyAt(this);
     },
