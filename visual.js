@@ -455,7 +455,7 @@ function Visual(options) {
           var mw =
             command ? (part.isBlock || part.isArg ? cmw : 0) :
             bool ? (part.isBlock && part.type === 'r' ? xp + part.height/4 | 0 : part.type !== 'b' ? xp + part.height/2 | 0 : 0) :
-            reporter ? (part.isArg && (part._type === 'd' || part._type === 'n') || part.isBlock && part.type === 'r' && !part.hasScript ? 0 : xp + part.height/4 | 0) : 0;
+            reporter ? (part.isArg && (part._type === 'd' || part._type === 'n') || part.isReporter && !part.hasScript ? 0 : xp + part.height/4 | 0) : 0;
           if (mw && !line && lineX < mw - xp) lineX = lineXs[line][lineXs[line].length-1] = mw - xp;
           lineX += part.width;
           width = Math.max(width, lineX);
