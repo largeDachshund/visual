@@ -23,6 +23,11 @@ function Visual(options) {
     return d;
   }
 
+  function ignoreEvent(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
   function layout() {
     if (!this.parent) return;
 
@@ -263,6 +268,15 @@ function Visual(options) {
 
     get workspace() {return this.parent && this.parent.workspace},
     get workspacePosition() {return getWorkspacePosition(this)},
+
+    get contextMenu() {
+      return new Menu(
+        'Duplicate',
+        'Delete',
+        Menu.line,
+        'Help',
+        'Add Comment');
+    },
 
     get dragObject() {return this},
 
@@ -668,6 +682,10 @@ function Visual(options) {
 
     get workspace() {return this.parent && this.parent.workspace},
     get workspacePosition() {return getWorkspacePosition(this)},
+
+    get contextMenu() {
+      return this.parent.contextMenu;
+    },
 
     get dragObject() {return this.parent.dragObject},
 
@@ -1079,6 +1097,7 @@ function Visual(options) {
 
     this.el.appendChild(this.fill = el('Visual-fill'));
     this.el.addEventListener('mousedown', this.press.bind(this));
+    this.el.addEventListener('contextmenu', this.blockContextMenu.bind(this));
     document.addEventListener('mousemove', this.drag.bind(this));
     document.addEventListener('mouseup', this.drop.bind(this));
 
@@ -1093,10 +1112,10 @@ function Visual(options) {
       host.parentNode.style.height = '100%';
       window.addEventListener('resize', this.layout.bind(this));
       window.addEventListener('scroll', this.scroll.bind(this));
-      this.layout();
     } else {
       this.el.addEventListener('scroll', this.scroll.bind(this));
     }
+    this.layout();
   }
 
   Workspace.prototype = {
@@ -1149,12 +1168,29 @@ function Visual(options) {
       return null;
     },
 
+    get contextMenu() {
+      return new Menu(
+        'Clean Up',
+        'Add Comment');
+    },
+
+    blockContextMenu: function(e) {
+      var t = (e.target.nodeType === 1 ? e.target : e.target.parentNode).tagName;
+      if (t !== 'INPUT' && t !== 'TEXTAREA' && t !== 'SELECT') e.preventDefault();
+    },
+
     press: function(e) {
       this.updateMouse(e);
       this.pressX = this.mouseX;
       this.pressY = this.mouseY;
       this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
-      this.shouldDrag = this.pressObject && !(this.pressObject.isArg && this.pressObject.field && document.activeElement === this.pressObject.field);
+
+      this.shouldDrag = e.button === 0 && this.pressObject && !(this.pressObject.isArg && this.pressObject.field && document.activeElement === this.pressObject.field);
+      if (e.button === 2) {
+        e.preventDefault();
+        var cm = (this.pressObject || this).contextMenu;
+        if (cm) cm.show(this);
+      }
       this.pressed = true;
       this.dragging = false;
     },
@@ -1164,18 +1200,7 @@ function Visual(options) {
 
       if (this.dragging) {
         this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
-        this.resetFeedback();
-        if (this.dragScript.blocks[0].isReporter) {
-          this.showReporterFeedback();
-        } else {
-          this.showCommandFeedback();
-        }
-        if (this.feedbackInfo) {
-          this.renderFeedback(this.feedbackInfo);
-          this.feedback.style.display = 'block';
-        } else {
-          this.feedback.style.display = 'none';
-        }
+        this.updateFeedback();
         if (e) e.preventDefault();
       } else if (this.pressed && this.shouldDrag) {
         this.dragging = true;
@@ -1189,7 +1214,23 @@ function Visual(options) {
         this.dragScript.el.classList.add('Visual-script-dragging');
         this.add(this.dragX + this.mouseX, this.dragY + this.mouseY, this.dragScript);
         this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
+        this.updateFeedback();
         e.preventDefault();
+      }
+    },
+
+    updateFeedback: function() {
+      this.resetFeedback();
+      if (this.dragScript.blocks[0].isReporter) {
+        this.showReporterFeedback();
+      } else {
+        this.showCommandFeedback();
+      }
+      if (this.feedbackInfo) {
+        this.renderFeedback(this.feedbackInfo);
+        this.feedback.style.display = 'block';
+      } else {
+        this.feedback.style.display = 'none';
       }
     },
 
@@ -1518,6 +1559,92 @@ function Visual(options) {
 
       this.fill.style.width = Math.max(this.width, vw) + 'px';
       this.fill.style.height = Math.max(this.height, vh) + 'px';
+    }
+  };
+
+
+  function Menu(items) {
+    this.el = el('Visual-menu');
+
+    this.items = [];
+
+    items = [].concat.apply([], arguments);
+    if (typeof items[0] === 'function') {
+      this.action = items.shift();
+    }
+    var length = items.length;
+    for (var i = 0; i < length; i++) {
+      this.add(items[i]);
+    }
+
+    this.documentMouseDown = this.documentMouseDown.bind(this);
+    this.mouseUp = this.mouseUp.bind(this);
+  }
+
+  Menu.line = {};
+
+  Menu.prototype = {
+    constructor: Menu,
+
+    add: function(item) {
+      if (item === Menu.line) {
+        this.el.appendChild(el('Visual-menu-line'));
+      } else {
+        if (typeof item === 'string') item = [item, item];
+        var i = el('Visual-menu-item');
+        i.textContent = item[0];
+        i.dataset.index = this.items.length;
+        this.items.push(item);
+        this.el.appendChild(i);
+      }
+    },
+
+    show: function(ws) {
+      this.workspace = ws;
+      var bb = ws.el.getBoundingClientRect();
+      this.x = bb.left + ws.mouseX;
+      this.y = bb.top + ws.mouseY;
+      setTransform(this.el, 'translate('+this.x+'px, '+this.y+'px)');
+      document.body.appendChild(this.el);
+      document.addEventListener('mousedown', this.documentMouseDown, true);
+      this.el.addEventListener('mouseup', this.mouseUp, true);
+    },
+
+    mouseUp: function(e) {
+      var t = e.target;
+      while (t) {
+        if (t.parentNode === this.el && t.dataset.index) {
+          var i = t.dataset.index;
+          this.commit(i);
+        }
+        t = t.parentNode;
+      }
+      e.stopPropagation();
+    },
+
+    documentMouseDown: function(e) {
+      var t = e.target;
+      while (t) {
+        if (t === this.el) {
+          e.stopPropagation();
+          return;
+        }
+        t = t.parentNode;
+      }
+      this.hide();
+    },
+
+    commit: function(index) {
+      if (typeof this.action === 'function') {
+        this.action(this.items[index][1]);
+      }
+      this.hide();
+    },
+
+    hide: function() {
+      if (this.el.parentNode) {
+        this.el.parentNode.removeChild(this.el);
+      }
     }
   };
 

@@ -1,3 +1,5 @@
+/* Workspace */
+
 .Visual-workspace {
   background: #ddd;
   cursor: default;
@@ -19,6 +21,18 @@ body.Visual-workspace {
   left: 0;
 }
 
+.Visual-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.Visual-feedback {
+  z-index: 1;
+}
+
+/* Script */
+
 .Visual-script {
   position: absolute;
   top: 0;
@@ -31,6 +45,8 @@ body.Visual-workspace {
 .Visual-script-dragging {
   z-index: 1;
 }
+
+/* Block */
 
 .Visual-block {
   position: relative;
@@ -73,21 +89,7 @@ body.Visual-workspace {
   margin-right: 9px;
 }
 
-.Visual-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-}
-
-.Visual-arrow {
-  position: absolute;
-  right: 4px;
-  top: 6px;
-}
-
-.Visual-feedback {
-  z-index: 1;
-}
+/* Arg */
 
 .Visual-part {
   display: inline-block;
@@ -155,6 +157,12 @@ body.Visual-workspace {
   color: #fff;
 }
 
+.Visual-arrow {
+  position: absolute;
+  right: 4px;
+  top: 6px;
+}
+
 .Visual-field-measure {
   position: absolute;
   top: -10000px;
@@ -163,11 +171,15 @@ body.Visual-workspace {
   padding: 0;
 }
 
+/* Label */
+
 .Visual-label {
   font: 600 11px/1.4 Helvetica Neue, Helvetica, Arial, sans-serif;
   letter-spacing: .02em;
   color: #fff;
 }
+
+/* Icon */
 
 .Visual-icon-loop {
   position: absolute;
@@ -176,4 +188,31 @@ body.Visual-workspace {
   bottom: 6px;
   right: 2px;
   margin: 0;
+}
+
+/* Menu */
+
+.Visual-menu {
+  position: fixed;
+  background: rgba(255, 255, 255, .95);
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 3px 8px rgba(0, 0, 0, .3);
+  padding: 5px 0;
+  z-index: 10000;
+}
+
+.Visual-menu-line {
+  margin: 5px 0;
+  height: 1px;
+  background: rgba(0, 0, 0, .2);
+}
+
+.Visual-menu-item {
+  padding: 2px 8px;
+  font: 12px Helvetica Neue, Helvetica, Arial, sans-serif;
+}
+
+.Visual-menu-item:hover {
+  background: rgba(0, 0, 0, .8);
+  color: #fff;
 }
