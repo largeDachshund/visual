@@ -366,7 +366,7 @@ function Visual(options) {
 
       return this;
     },
-    
+
     destroy: function() {
       if (!this.parent) return this;
       if (this.parent.isScript) {
@@ -424,7 +424,7 @@ function Visual(options) {
     partPadding: 4,
     linePadding: 4,
     scriptPadding: 15,
-    
+
     minDistance: function(part) {
       if (this.isBoolean) {
         return (
@@ -1198,9 +1198,9 @@ function Visual(options) {
       var i = this.blocks.indexOf(block);
       this.blocks.splice(i, 1);
       this.el.removeChild(block.el);
-      
+
       this.layout();
-      
+
       return this;
     },
 
@@ -1755,13 +1755,13 @@ function Visual(options) {
 
   Menu.prototype = {
     constructor: Menu,
-    
+
     withAction: function(action, context) {
       this.action = action;
       this.context = context;
       return this;
     },
-    
+
     withContext: function(context) {
       this.context = context;
       return this;
