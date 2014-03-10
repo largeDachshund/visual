@@ -159,7 +159,7 @@ body.Visual-workspace {
 /* Label */
 
 .Visual-label {
-  font: 600 11px/1.4 Helvetica Neue, Helvetica, Arial, sans-serif;
+  font: 600 11px Helvetica Neue, Helvetica, Arial, sans-serif;
   letter-spacing: .02em;
   color: #fff;
 }

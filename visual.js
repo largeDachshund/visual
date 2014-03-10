@@ -574,7 +574,7 @@ function Visual(options) {
       this._text = value;
       var metrics = Label.measure(value);
       this.width = metrics.width;
-      this.height = metrics.height;
+      this.height = metrics.height * 1.2 | 0;
     },
 
     get workspace() {return this.parent && this.parent.workspace},
@@ -922,6 +922,10 @@ function Visual(options) {
         default:
           this.width = 13;
           this.height = 13;
+          if (this.field) {
+            this.field.style.width = this.width + 'px';
+            this.field.style.height = this.height + 'px';
+          }
           break;
       }
 
