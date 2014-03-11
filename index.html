@@ -292,8 +292,8 @@ var vis = Visual({
     "computeFunction:of:": ["r", "%m.mathOp of %n", 8, "sqrt", 9],
 
     // variables
-    "setVar": ["c", "set %m.var to %s", 9],
-    "changeVar": ["c", "change %m.var by %n", 9],
+    "setVar:to:": ["c", "set %m.var to %s", 9],
+    "changeVar:by:": ["c", "change %m.var by %n", 9],
     "showVariable:": ["c", "show variable %m.var", 9],
     "hideVariable:": ["c", "hide variable %m.var", 9],
 
@@ -356,6 +356,270 @@ var app = new vis.App();
 var p = new vis.Palette(document.querySelector('.palette'));
 app.add(p);
 
+var palettes = {
+  1: [
+    // motion
+    "forward:",
+    "turnRight:",
+    "turnLeft:",
+    "--",
+    "heading:",
+    "pointTowards:",
+    "--",
+    "gotoX:y:",
+    "gotoSpriteOrMouse:",
+    "glideSecs:toX:y:elapsed:from:",
+    "--",
+    "changeXposBy:",
+    "xpos:",
+    "changeYposBy:",
+    "ypos:",
+    "--",
+    "bounceOffEdge",
+    "--",
+    "setRotationStyle",
+    "--",
+    "xpos",
+    "ypos",
+    "heading",
+  ],
+  2: [
+    // looks
+    "say:duration:elapsed:from:",
+    "say:",
+    "think:duration:elapsed:from:",
+    "think:",
+    "--",
+    "show",
+    "hide",
+    "--",
+    "lookLike:",
+    "nextCostume",
+    "startScene",
+    "--",
+    "changeGraphicEffect:by:",
+    "setGraphicEffect:to:",
+    "filterReset",
+    "--",
+    "changeSizeBy:",
+    "setSizeTo:",
+    "--",
+    "comeToFront",
+    "goBackByLayers:",
+    "--",
+    "costumeIndex",
+    "sceneName",
+    "scale",
+  ],
+  102: [
+    // stage looks
+    "startScene",
+    "startSceneAndWait",
+    "nextScene",
+    "--",
+    "changeGraphicEffect:by:",
+    "setGraphicEffect:to:",
+    "filterReset",
+    "--",
+    "sceneName",
+    "backgroundIndex",
+  ],
+  3: [
+    // sound
+    "playSound:",
+    "doPlaySoundAndWait",
+    "stopAllSounds",
+    "--",
+    "playDrum",
+    "rest:elapsed:from:",
+    "--",
+    "noteOn:duration:elapsed:from:",
+    "instrument:",
+    "--",
+    "changeVolumeBy:",
+    "setVolumeTo:",
+    "volume",
+    "--",
+    "changeTempoBy:",
+    "setTempoTo:",
+    "tempo",
+  ],
+  4: [
+    // pen
+    "clearPenTrails",
+    "--",
+    "stampCostume",
+    "--",
+    "putPenDown",
+    "putPenUp",
+    "--",
+    "penColor:",
+    "changePenHueBy:",
+    "setPenHueTo:",
+    "--",
+    "changePenShadeBy:",
+    "setPenShadeTo:",
+    "--",
+    "changePenSizeBy:",
+    "penSize:",
+    "--",
+  ],
+  104: [
+    // stage pen
+    "clearPenTrails",
+  ],
+  5: [
+    // triggers
+    "whenGreenFlag",
+    "whenKeyPressed",
+    "whenClicked",
+    "whenSceneStarts",
+    "--",
+    "whenSensorGreaterThan",
+    "--",
+    "whenIReceive",
+    "broadcast:",
+    "doBroadcastAndWait",
+  ],
+  6: [
+    // control - sprite
+    "wait:elapsed:from:",
+    "--",
+    "doRepeat",
+    "doForever",
+    "--",
+    "doIf",
+    "doIfElse",
+    "doWaitUntil",
+    "doUntil",
+    "--",
+    "stopScripts",
+    "--",
+    "whenCloned",
+    "createCloneOf",
+    "deleteClone",
+    "--",
+  ],
+  106: [
+    // control - stage
+    "wait:elapsed:from:",
+    "--",
+    "doRepeat",
+    "doForever",
+    "--",
+    "doIf",
+    "doIfElse",
+    "doWaitUntil",
+    "doUntil",
+    "--",
+    "stopScripts",
+    "--",
+    "createCloneOf",
+  ],
+  7: [
+    // sensing
+    "touching:",
+    "touchingColor:",
+    "color:sees:",
+    "distanceTo:",
+    "--",
+    "doAsk",
+    "answer",
+    "--",
+    "keyPressed:",
+    "mousePressed",
+    "mouseX",
+    "mouseY",
+    "--",
+    "soundLevel",
+    "--",
+    "senseVideoMotion",
+    "setVideoState",
+    "setVideoTransparency",
+    "--",
+    "timer",
+    "timerReset",
+    "--",
+    "getAttribute:of:",
+    "--",
+    "timeAndDate",
+    "timestamp",
+    "getUserName",
+  ],
+  107: [
+    // stage sensing
+    "doAsk",
+    "answer",
+    "--",
+    "keyPressed:",
+    "mousePressed",
+    "mouseX",
+    "mouseY",
+    "--",
+    "soundLevel",
+    "--",
+    "senseVideoMotion",
+    "setVideoState",
+    "setVideoTransparency",
+    "--",
+    "timer",
+    "timerReset",
+    "--",
+    "getAttribute:of:",
+    "--",
+    "timeAndDate",
+    "timestamp",
+    "getUserName",
+  ],
+  8: [
+    // operators
+    "+",
+    "-",
+    "*",
+    "/",
+    "--",
+    "randomFrom:to:",
+    "--",
+    "<",
+    "=",
+    ">",
+    "--",
+    "&",
+    "|",
+    "not",
+    "--",
+    "concatenate:with:",
+    "letter:of:",
+    "stringLength:",
+    "--",
+    "%",
+    "rounded",
+    "--",
+    "computeFunction:of:",
+  ],
+  9: [
+    // variables
+    'setVar:to:',
+    "changeVar:by:",
+    "showVariable:",
+    "hideVariable:",
+
+    // lists
+    "append:toList:",
+    "--",
+    "deleteLine:ofList:",
+    "insert:at:ofList:",
+    "setLine:ofList:to:",
+    "--",
+    "getLine:ofList:",
+    "lineCountOfList:",
+    "list:contains:",
+    "--",
+    "showList:",
+    "hideList:"
+  ]
+};
+
 var categoryButton;
 var buttons = {};
 function switchPalette(category) {
@@ -365,11 +629,9 @@ function switchPalette(category) {
   categoryButton = buttons[category];
   categoryButton.className = 'selected';
   p.clear();
-  for (var name in vis.options.blocks) {
-    if (vis.getBlock(name)[3] === +category) {
-      p.add(new vis.Script().add(new vis.Block(name)));
-    }
-  }
+  (palettes[category] || []).forEach(function(name) {
+    p.add(name === '--' ? vis.Palette.space() : new vis.Script().add(new vis.Block(name)));
+  });
 }
 
 function buttonClick() {

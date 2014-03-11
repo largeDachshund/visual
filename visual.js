@@ -1441,7 +1441,7 @@ function Visual(options) {
     var scripts = this.scripts;
     for (var i = scripts.length; i--;) {
       var s = scripts[i];
-      this.el.removeChild(s.el);
+      if (!s.isSpace) this.el.removeChild(s.el);
       s.parent = null;
     }
     this.scripts = [];
@@ -1455,6 +1455,7 @@ function Visual(options) {
     var scripts = this.scripts;
     for (var i = scripts.length; i--;) {
       var script = scripts[i];
+      if (script.isSpace) continue;
       var o = script.objectFromPoint(x - script.x, y - script.y);
       if (o) return o;
     }
@@ -1547,6 +1548,13 @@ function Visual(options) {
   function Palette(host) {
     Workspace.call(this, host);
   }
+  
+  Palette.space = function(size) {
+    return {
+      isSpace: true,
+      size: size == null ? 24 : size
+    };
+  };
 
   Palette.prototype = Object.create(Workspace.prototype);
   Palette.prototype.constructor = Palette;
@@ -1561,32 +1569,39 @@ function Visual(options) {
   Palette.prototype.add = function(script) {
     if (script.parent) script.parent.remove(script);
 
-    var y = this.scripts.length ? this.contentHeight - this.extraSpace + this.spacing : this.padding;
-    script.moveTo(this.padding, y);
-
-    script.parent = this;
     this.scripts.push(script);
+    script.parent = this;
 
-    script.layoutChildren();
-    this.contentWidth = Math.max(this.contentWidth, this.padding + script.width + this.extraSpace)
-    this.contentHeight = y + script.height + this.extraSpace;
+    if (script.isSpace) {
+      this.contentHeight += script.size - (this.scripts.length > 1 ? this.spacing : 0);
+    } else {
+      var y = this.scripts.length > 1 ? this.contentHeight - this.extraSpace + this.spacing : this.padding;
+      script.moveTo(this.padding, y);
+  
+      script.layoutChildren();
+      this.contentWidth = Math.max(this.contentWidth, this.padding + script.width + this.extraSpace)
+      this.contentHeight = y + script.height + this.extraSpace;
+      this.el.appendChild(script.el);
+    }
+
     this.refill();
-
-    this.el.appendChild(script.el);
-
     return this;
   };
 
   Palette.prototype.insert = function(script, before) {
     if (!before || before.parent !== this) return this.add(script);
+    
     if (script.parent) script.parent.remove(script);
 
-    script.parent = this;
     var i = this.scripts.indexOf(before);
     this.scripts.splice(i, 0, script);
+    script.parent = this;
 
-    script.layoutChildren();
-    this.el.appendChild(script.el);
+    if (!script.isSpace) {
+      script.layoutChildren();
+      this.el.appendChild(script.el);
+    }
+
     this.layout();
 
     return this;
@@ -1608,9 +1623,13 @@ function Visual(options) {
     var length = scripts.length;
     for (var i = 0; i < length; i++) {
       var s = scripts[i];
-      s.moveTo(pd, y);
-      w = Math.max(w, s.width);
-      y += s.height + sp;
+      if (s.isSpace) {
+        y += s.size - (i === 0 ? 0 : sp);
+      } else {
+        s.moveTo(pd, y);
+        w = Math.max(w, s.width);
+        y += s.height + sp;
+      }
     }
 
     this.contentHeight = y - sp + es;
