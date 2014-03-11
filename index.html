@@ -362,6 +362,67 @@ var vis = Visual({
         m.add(String.fromCharCode(i));
       }
       return m;
+    },
+    spriteOrMouse: function() {
+      return new vis.Menu('mouse-pointer', vis.Menu.line, 'Sprite2');
+    },
+    touching: function() {
+      return new vis.Menu('mouse-pointer', 'edge', vis.Menu.line, 'Sprite2');
+    },
+    rotationStyle: function() {
+      return new vis.Menu('left-right', 'all around', "don't rotate");
+    },
+    effect: function() {
+      return new vis.Menu('color', 'fisheye', 'whirl', 'pixelate', 'mosaic', 'brightness', 'ghost');
+    },
+    costume: function() {
+      return new vis.Menu('costume1', 'costume2', 'costume3');
+    },
+    backdrop: function() {
+      return new vis.Menu('backdrop1', 'backdrop2', 'backdrop3');
+    },
+    sound: function() {
+      return new vis.Menu('pop');
+    },
+    broadcast: function() {
+      return new vis.Menu(
+        'broadcast1',
+        vis.Menu.line,
+        ['new message...', function() {
+          var arg = this;
+          var value = prompt('Message name?');
+          if (value != null) arg.value = value;
+        }]);
+    },
+    triggerSensor: function() {
+      return new vis.Menu('loudness', 'timer', 'video motion');
+    },
+    stop: function() {
+      return new vis.Menu('all', 'this script', 'other scripts in sprite');
+    },
+    spriteOnly: function() {
+      return new vis.Menu('myself', vis.Menu.line, 'Sprite1', 'Sprite2');
+    },
+    videoMotionType: function() {
+      return new vis.Menu('motion', 'direction');
+    },
+    stageOrThis: function() {
+      return new vis.Menu('stage', 'this sprite');
+    },
+    videoState: function() {
+      return new vis.Menu('off', 'on', 'on-flipped');
+    },
+    spriteOrStage: function() {
+      return new vis.Menu('Stage', vis.Menu.line, 'Sprite2');
+    },
+    attribute: function(arg) {
+      return arg.parent.args[1].value === 'Stage' ? new vis.Menu('backdrop #', 'backdrop name', 'volume') : new vis.Menu('x position', 'y position', 'direction', 'costume #', 'costume name', 'size', 'volume');
+    },
+    timeAndDate: function() {
+      return new vis.Menu('year', 'month', 'date', 'day of week', 'hour', 'minute', 'second');
+    },
+    mathOp: function() {
+      return new vis.Menu('abs', 'floor', 'ceiling', 'sqrt', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'ln', 'log', 'e ^', '10 ^');
     }
   }
 });
