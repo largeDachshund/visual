@@ -94,6 +94,7 @@ body.Visual-workspace {
 
 .Visual-menu {
   position: fixed;
+  cursor: default;
   background: rgba(255, 255, 255, .95);
   border-radius: 3px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 3px 8px rgba(0, 0, 0, .3);
