@@ -4,6 +4,14 @@
   left: 0;
 }
 
+.Visual-no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
 .Visual-metrics {
   position: fixed;
   top: -10000px;
@@ -20,11 +28,6 @@
   background: #ddd;
   cursor: default;
   overflow: auto;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  -o-user-select: none;
-  user-select: none;
 }
 
 body.Visual-workspace {

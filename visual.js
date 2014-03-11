@@ -15,6 +15,12 @@ function Visual(options) {
       return [name].concat(options.categories[name]);
     };
   }
+  if (!options.getMenu) {
+    options.getMenu = function(arg) {
+      var m = options.menus[arg.menu];
+      return m ? m(arg) : null;
+    };
+  }
 
 
   function el(tagName, className) {
@@ -26,6 +32,10 @@ function Visual(options) {
   function ignoreEvent(e) {
     e.preventDefault();
     e.stopPropagation();
+  }
+
+  function getEl(o) {
+    return o.el;
   }
 
   function layout() {
@@ -891,7 +901,13 @@ function Visual(options) {
 
   Arg.prototype.click = function() {
     if (this._type === 'm') {
-      // TODO
+      var menu = options.getMenu(this);
+      if (menu) {
+        var pos = this.worldPosition;
+        menu.withAction(function(item) {
+          this.value = item;
+        }, this).showAt(pos.x, pos.y + this.height, this.app);
+      }
     } else if (this.isTextArg) {
       this.field.select();
     }
@@ -1334,7 +1350,7 @@ function Visual(options) {
 
   function Workspace(host) {
     this.el = host;
-    this.el.className += ' Visual-workspace';
+    this.el.className += ' Visual-workspace Visual-no-select';
 
     this.el.appendChild(this.fill = el('Visual-absolute'));
 
@@ -1587,36 +1603,46 @@ function Visual(options) {
     this.updateFeedback();
   };
 
+  App.prototype.hideMenus = function() {
+    if (!this.menus.length) return this;
+    this.menus.forEach(function(m) {
+      m.el.parentNode.removeChild(m.el);
+      m.parent = null;
+    });
+    this.menus = [];
+    return this;
+  };
+
   App.prototype.mouseDown = function(e) {
     this.updateMouse(e);
 
-    this.hideMenus(e);
-    this.drop();
+    this.menuMouseDown(e);
 
-    if (e.button === 2) {
-      var t = e.target;
-      var els = this.workspaces.concat(this.menus).map(function(w) {return w.el});
-      while (t) {
-        var n = t.tagName;
-        if (n === 'INPUT' || n === 'TEXTAREA' || t === 'SELECT') return;
-        t = t.parentNode;
-      }
-    }
+    var pressType = this.pressType(e);
+    console.log(e.target, pressType);
+    if (pressType !== 'workspace' && (pressType !== 'input' || e.button === 2)) return;
 
     this.pressX = this.mouseX;
     this.pressY = this.mouseY;
     this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
     this.shouldDrag = false;
 
-    if (this.pressObject) {
+    if (this.pressObject && !this.dragging) {
       if (e.button === 0) {
         this.shouldDrag = !(this.pressObject.isWorkspace || this.pressObject.isPalette || this.pressObject.isTextArg && document.activeElement === this.pressObject.field);
 
       } else if (e.button === 2) {
+        this.hideMenus();
         var cm = (this.pressObject || this).contextMenu;
         if (cm) cm.show(this);
         e.preventDefault();
       }
+    }
+
+    this.drop();
+
+    if (this.shouldDrag) {
+      document.activeElement.blur();
     }
 
     this.pressed = true;
@@ -1658,34 +1684,37 @@ function Visual(options) {
   };
 
   App.prototype.disableContextMenu = function(e) {
-    var t = e.target;
-    var els = this.workspaces.concat(this.menus).map(function(w) {return w.el});
-    while (t) {
-      var n = t.tagName;
-      if (n === 'INPUT' || n === 'TEXTAREA' || t === 'SELECT') return;
-      if (els.indexOf(t) !== -1) {
-        e.preventDefault();
-        return;
-      }
-      t = t.parentNode;
+    var pressType = this.pressType(e);
+    if (pressType === 'workspace' || pressType === 'menu') {
+      e.preventDefault();
     }
   };
 
-  App.prototype.hideMenus = function(e) {
+  App.prototype.pressType = function(e) {
+    var t = e.target;
+    var workspaceEls = this.workspaces.map(getEl);
+    var menuEls = this.menus.map(getEl);
+    while (t) {
+      var n = t.tagName;
+      if (n === 'INPUT' || n === 'TEXTAREA' || t === 'SELECT') return 'input';
+      if (workspaceEls.indexOf(t) !== -1) return 'workspace';
+      if (menuEls.indexOf(t) !== -1) return 'menu';
+      t = t.parentNode;
+    }
+    return null;
+  };
+
+  App.prototype.menuMouseDown = function(e) {
     if (!this.menus.length) return;
 
     var t = e.target;
-    var els = this.menus.map(function(m) {return m.el});
+    var els = this.menus.map(getEl);
     while (t) {
       if (els.indexOf(t) === 0) return;
       t = t.parentNode;
     }
 
-    this.menus.forEach(function(m) {
-      m.el.parentNode.removeChild(m.el);
-      m.parent = null;
-    });
-    this.menus = [];
+    this.hideMenus();
   };
 
   App.prototype.updateMouse = function(e) {
@@ -1982,7 +2011,7 @@ function Visual(options) {
 
 
   function Menu(items) {
-    this.el = el('Visual-menu');
+    this.el = el('Visual-menu Visual-no-select');
 
     this.items = [];
 
@@ -2034,6 +2063,11 @@ function Visual(options) {
 
   Menu.prototype.show = function(app) {
     this.moveTo(app.mouseX, app.mouseY);
+    app.add(this);
+  };
+
+  Menu.prototype.showAt = function(x, y, app) {
+    this.moveTo(x, y);
     app.add(this);
   };
 

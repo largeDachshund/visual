@@ -85,6 +85,11 @@ var vis = Visual({
     join: ['r', 'join %s %s', 'operators'],
     equal: ['b', '%s = %s', 'operators'],
     play: ['c', 'play drum %d.drum for %n beats', 'sound', 1, 10],
+  },
+  menus: {
+    var: function() {
+      return new vis.Menu('variable', 'another', vis.Menu.line, 'local')
+    }
   }
 });
 
