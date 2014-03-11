@@ -494,7 +494,7 @@ function Visual(options) {
   Block.prototype.paddingX = 5;
   Block.prototype.paddingY = 3;
   Block.prototype.partPadding = 4;
-  Block.prototype.linePadding = 4;
+  Block.prototype.linePadding = 3;
   Block.prototype.scriptPadding = 15;
 
   Block.prototype.minDistance = function(part) {
@@ -560,7 +560,7 @@ function Visual(options) {
     }
 
     if (!lines[line].length) {
-      lineHeights[line] = 8;
+      lineHeights[line] = 10;
     }
     width += xp * 2;
 
