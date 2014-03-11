@@ -345,11 +345,18 @@ var vis = Visual({
     "getUserId": ["r", "user id", 99],
   },
   menus: {
+    direction: function() {
+      return new vis.Menu(
+        ['(90) right', 90],
+        ['(-90) left', -90],
+        ['(0) up', 0],
+        ['(180) down', 180]);
+    },
     var: function() {
-      return new vis.Menu('variable', 'another', vis.Menu.line, 'local')
+      return new vis.Menu('variable', 'another', vis.Menu.line, 'local');
     },
     list: function() {
-      return new vis.Menu('list', 'another', vis.Menu.line, 'local')
+      return new vis.Menu('list', 'another', vis.Menu.line, 'local');
     },
     key: function() {
       var m = new vis.Menu('up arrow', 'down arrow', 'left arrow', 'right arrow', 'space');
