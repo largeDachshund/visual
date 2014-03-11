@@ -328,13 +328,17 @@ function Visual(options) {
   def(Block.prototype, 'worldPosition', {get: getWorldPosition});
 
   def(Block.prototype, 'contextMenu', {get: function() {
-    var workspace = this.workspace;
-    var pressX = workspace.pressX;
-    var pressY = workspace.pressY;
+    if (this.workspace.isPalette) {
+      return new Menu(
+        'Help').withContext(this);
+    }
+    var app = this.app;
+    var pressX = app.pressX;
+    var pressY = app.pressY;
     return new Menu(
       ['Duplicate', function() {
         var pos = this.worldPosition;
-        workspace.grab(this.scriptCopy(), pos.x - pressX, pos.y - pressY);
+        app.grab(this.scriptCopy(), pos.x - pressX, pos.y - pressY);
       }],
       Menu.line,
       'Help',
@@ -1362,6 +1366,7 @@ function Visual(options) {
   def(Workspace.prototype, 'worldPosition', {get: getWorldPosition});
 
   def(Workspace.prototype, 'contextMenu', {get: function() {
+    if (this.isPalette) return;
     return new Menu(
       'Clean Up',
       'Add Comment');
@@ -1559,8 +1564,8 @@ function Visual(options) {
     this.dragScript.el.classList.add('Visual-script-dragging');
     this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
     this.dragScript.parent = this;
-    this.dragScript.layout();
     document.body.appendChild(this.dragScript.el);
+    this.dragScript.layoutChildren();
     this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
     this.updateFeedback();
   };

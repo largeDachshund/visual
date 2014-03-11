@@ -94,6 +94,10 @@ var p = new vis.Workspace(document.querySelector('.palette'));
 p.isPalette = true;
 app.add(p);
 
+p.add(20, 20, new vis.Script().add(new vis.Block('wait')));
+p.add(20, 60, new vis.Script().add(new vis.Block('if')));
+p.add(20, 124, new vis.Script().add(new vis.Block('ifElse')));
+
 var w = new vis.Workspace(document.querySelector('.workspace'));
 app.add(w);
 
