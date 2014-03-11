@@ -423,6 +423,38 @@ var vis = Visual({
     },
     mathOp: function() {
       return new vis.Menu('abs', 'floor', 'ceiling', 'sqrt', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'ln', 'log', 'e ^', '10 ^');
+    },
+    drum: function() {
+      var m = new vis.Menu();
+      ['Snare Drum', 'Bass Drum', 'Side Stick', 'Crash Cymbal', 'Open Hi-Hat', 'Closed Hi-Hat', 'Tambourine', 'Hand Clap', 'Claves', 'Wood Block', 'Cowbell', 'Triangle', 'Bongo', 'Conga', 'Cabassa', 'Guiro', 'Vibraslap', 'Open Culca'].forEach(function(x, i) {
+        m.add(['('+(i + 1)+') ' + x, i + 1]);
+      });
+      return m;
+    },
+    instrument: function() {
+      var m = new vis.Menu();
+      ['Piano', 'Electric Piano', 'Organ', 'Guitar', 'Electric Guitar', 'Bass', 'Pizzicato', 'Cello', 'Trombone', 'Clarinet', 'Saxophone', 'Flute', 'Wooden Flute', 'Bassoon', 'Choir', 'Vibraphone', 'Music Box', 'Steel Drum', 'Marimba', 'Synth Lead', 'Synth Pad'].forEach(function(x, i) {
+        m.add(['('+(i + 1)+') ' + x, i + 1]);
+      });
+      return m;
+    },
+    note: function() {
+      return new vis.Menu(
+        ['(48) Low C', 48],
+        ['(50) D', 50],
+        ['(52) E', 52],
+        ['(53) F', 53],
+        ['(55) G', 55],
+        ['(57) A', 57],
+        ['(59) B', 59],
+        ['(60) Middle C', 60],
+        ['(62) D', 62],
+        ['(64) E', 64],
+        ['(65) F', 65],
+        ['(67) G', 67],
+        ['(69) A', 69],
+        ['(71) B', 71],
+        ['(72) High C', 72]);
     }
   }
 });

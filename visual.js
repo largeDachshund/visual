@@ -919,11 +919,14 @@ function Visual(options) {
 
   def(Arg.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
-  Arg.prototype.click = function() {
-    if (this._type === 'm') {
+  Arg.prototype.click = function(x, y) {
+    if (this._type === 'd') {
+      var pos = this.worldPosition;
+    }
+    if (this._type === 'm' || this._type === 'd' && x >= pos.x + this.arrowX) {
       var menu = options.getMenu(this);
       if (menu) {
-        var pos = this.worldPosition;
+        pos = pos || this.worldPosition;
         menu.withAction(function(item) {
           this.value = item;
         }, this).showAt(pos.x, pos.y + this.height, this.app);
@@ -1049,7 +1052,9 @@ function Visual(options) {
         this.field.style.width = this.width + 'px';
         this.field.style.height = this.height + 'px';
         if (this.arrow) {
-          setTransform(this.arrow, 'translate('+(this.width - this.arrow.width - 3)+'px, '+((this.height - this.arrow.height) / 2 | 0)+'px)');
+          this.arrowX = this.width - this.arrow.width - 3;
+          this.arrowY = (this.height - this.arrow.height) / 2 | 0;
+          setTransform(this.arrow, 'translate('+this.arrowX+'px, '+this.arrowY+'px)');
         }
         break;
       case 't':
@@ -1548,7 +1553,7 @@ function Visual(options) {
   function Palette(host) {
     Workspace.call(this, host);
   }
-  
+
   Palette.space = function(size) {
     return {
       isSpace: true,
@@ -1577,7 +1582,7 @@ function Visual(options) {
     } else {
       var y = this.scripts.length > 1 ? this.contentHeight - this.extraSpace + this.spacing : this.padding;
       script.moveTo(this.padding, y);
-  
+
       script.layoutChildren();
       this.contentWidth = Math.max(this.contentWidth, this.padding + script.width + this.extraSpace)
       this.contentHeight = y + script.height + this.extraSpace;
@@ -1590,7 +1595,7 @@ function Visual(options) {
 
   Palette.prototype.insert = function(script, before) {
     if (!before || before.parent !== this) return this.add(script);
-    
+
     if (script.parent) script.parent.remove(script);
 
     var i = this.scripts.indexOf(before);
@@ -1802,7 +1807,7 @@ function Visual(options) {
     if (this.dragging) {
       this.drop();
     } else if (this.shouldDrag) {
-      this.pressObject.click();
+      this.pressObject.click(this.pressX, this.pressY);
     }
 
     this.pressed = false;
