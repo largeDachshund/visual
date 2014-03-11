@@ -3,7 +3,33 @@
 <title>Visual: Demo</title>
 <link rel=stylesheet href=visual.css>
 
+<style>
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+.palette {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200px;
+  bottom: 0;
+  background: #eee;
+  border-right: 1px solid #aaa;
+}
+.workspace {
+  position: absolute;
+  top: 0;
+  left: 201px;
+  right: 0;
+  bottom: 0;
+}
+</style>
+
 <body>
+<div class=palette></div>
+<div class=workspace></div>
 <script src=visual.js></script>
 <script>
 
@@ -64,7 +90,11 @@ var vis = Visual({
 
 var app = new vis.App();
 
-var w = new vis.Workspace(document.body);
+var p = new vis.Workspace(document.querySelector('.palette'));
+p.isPalette = true;
+app.add(p);
+
+var w = new vis.Workspace(document.querySelector('.workspace'));
 app.add(w);
 
 w.add(20, 20, new vis.Script()

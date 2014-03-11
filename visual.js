@@ -90,6 +90,10 @@ function Visual(options) {
       var bb = o.el.getBoundingClientRect();
       x += Math.round(bb.left);
       y += Math.round(bb.top);
+      if (o.el !== document.body) {
+        x -= o.scrollX;
+        y -= o.scrollY;
+      }
     }
     return {x: x, y: y};
   }
@@ -339,7 +343,16 @@ function Visual(options) {
       ['Delete', this.destroy]).withContext(this);
   }});
 
-  def(Block.prototype, 'dragObject', {get: function() {return this}}),
+  def(Block.prototype, 'dragObject', {get: function() {
+    if (this.workspace.isPalette) {
+      var o = this;
+      while (!o.parent.isWorkspace) {
+        o = o.parent;
+      }
+      return o.blocks[0];
+    }
+    return this;
+  }}),
 
   Block.prototype.click = function() {};
 
@@ -429,6 +442,9 @@ function Visual(options) {
   };
 
   Block.prototype.detach = function() {
+    if (this.workspace.isPalette) {
+      return this.scriptCopy();
+    }
     if (this.parent.isBlock) {
       this.parent.reset(this);
       return new Script().add(this);
@@ -1335,6 +1351,8 @@ function Visual(options) {
   Workspace.prototype.isWorkspace = true;
 
   Workspace.prototype.parent = null;
+  Workspace.prototype.scrollX = 0;
+  Workspace.prototype.scrollY = 0;
 
   Workspace.prototype.padding = 20;
   Workspace.prototype.extraSpace = 100;
@@ -1646,6 +1664,7 @@ function Visual(options) {
       this.applyDrop(this.feedbackInfo);
     } else {
       var workspaces = this.workspaces;
+      var found = false;
       for (var i = workspaces.length; i--;) {
         var ws = workspaces[i];
         var bb = ws.el.getBoundingClientRect();
@@ -1653,14 +1672,19 @@ function Visual(options) {
         var y = Math.round(bb.top);
         var w = Math.round(bb.right - x);
         var h = Math.round(bb.bottom - y);
-        if (ws.el === document.body || this.mouseX >= x && this.mouseX < x + w && this.mouseY >= x && this.mouseY < y + h) {
+        if (ws.el === document.body || this.mouseX >= x && this.mouseX < x + w && this.mouseY >= y && this.mouseY < y + h) {
           if (!ws.isPalette) {
+            if (ws.el !== document.body) {
+              x -= ws.scrollX;
+              y -= ws.scrollY;
+            }
             ws.add(this.dragX + this.mouseX - x, this.dragY + this.mouseY - y, this.dragScript);
           }
+          found = true;
           break;
         }
       }
-      if (this.dragWorkspace && !this.dragWorkspace.isPalette && !this.dragScript.parent) {
+      if (!found && this.dragWorkspace && !this.dragWorkspace.isPalette) {
         this.dragWorkspace.add(this.dragPos.x, this.dragPos.y, this.dragScript);
       }
     }
