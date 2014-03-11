@@ -1532,8 +1532,9 @@ function Visual(options) {
   Palette.prototype.constructor = Palette;
 
   Palette.prototype.isPalette = true;
-  Palette.prototype.extraSpace = 20;
-  Palette.prototype.spacing = 10;
+  Palette.prototype.padding = 10;
+  Palette.prototype.extraSpace = 10;
+  Palette.prototype.spacing = 7;
 
   Palette.prototype.cleanUp = undefined;
 
@@ -2192,6 +2193,10 @@ function Visual(options) {
 
 
   return {
+    options: options,
+    getCategory: options.getCategory,
+    getBlock: options.getBlock,
+    getMenu: options.getMenu,
     Block: Block,
     Label: Label,
     Icon: Icon,

@@ -9,14 +9,60 @@ html, body {
   margin: 0;
   overflow: hidden;
 }
+.buttons,
 .palette {
   position: absolute;
-  top: 0;
   left: 0;
-  width: 200px;
+  border-right: 1px solid #bcbdbe;
+  background: #e6e8e8;
+}
+.buttons {
+  width: 190px;
+  padding: 10px 0px 8px 10px;
+  top: 0;
+  height: 102px;
+}
+.buttons::before {
+  content: '';
+  position: absolute;
   bottom: 0;
-  background: #eee;
-  border-right: 1px solid #aaa;
+  left: 10px;
+  right: 10px;
+  height: 1px;
+  background: #bcbdbe;
+  border-bottom: 1px solid #f2f2f2;
+}
+button {
+  float: left;
+  width: 85px;
+  height: 18px;
+  padding: 0;
+  padding-left: 4px;
+  border: 0;
+  border-left: 7px solid;
+  background: 0;
+  margin: 0 10px 2px 0;
+  outline: none;
+  text-align: left;
+}
+button strong {
+  font: 12px/18px Helvetica Neue, Helvetica, Arial, sans-serif;
+  color: #8f9193;
+}
+button:hover strong {
+  color: #fba939;
+}
+button.selected {
+  background: currentColor;
+}
+button.selected strong {
+  color: #fff;
+  font-weight: bold;
+}
+.palette {
+  width: 200px;
+  top: 120px;
+  bottom: 0;
 }
 .workspace {
   position: absolute;
@@ -24,10 +70,23 @@ html, body {
   left: 201px;
   right: 0;
   bottom: 0;
+  background: #e0e0e0;
 }
 </style>
 
-<body>
+<body class=Visual-no-select>
+<div class=buttons>
+  <button value=motion></button>
+  <button value=events></button>
+  <button value=looks></button>
+  <button value=control></button>
+  <button value=sound></button>
+  <button value=sensing></button>
+  <button value=pen></button>
+  <button value=operators></button>
+  <button value=data></button>
+  <button value=moreBlocks></button>
+</div>
 <div class=palette></div>
 <div class=workspace></div>
 <script src=visual.js></script>
@@ -96,14 +155,37 @@ var vis = Visual({
 var app = new vis.App();
 
 var p = new vis.Palette(document.querySelector('.palette'));
-p.isPalette = true;
 app.add(p);
 
-p.add(new vis.Script().add(new vis.Block('wait')));
-p.add(new vis.Script().add(new vis.Block('if', [new vis.Block('equal')])));
-p.add(new vis.Script().add(new vis.Block('ifElse')));
+var categoryButton;
+var buttons = {};
+function switchPalette(category) {
+  if (categoryButton) {
+    categoryButton.className = '';
+  }
+  categoryButton = buttons[category];
+  categoryButton.className = 'selected';
+  p.clear();
+  for (var name in vis.options.blocks) {
+    if (vis.getBlock(name)[3] === category) {
+      p.add(new vis.Script().add(new vis.Block(name)));
+    }
+  }
+}
 
-p.insert(new vis.Script().add(new vis.Block('play')), p.scripts[1]);
+function buttonClick() {
+  switchPalette(this.value);
+}
+
+[].forEach.call(document.querySelectorAll('button'), function(b) {
+  var cat = vis.getCategory(b.value);
+  b.style.color = cat[2];
+  b.innerHTML = '<strong>' + cat[1] + '</strong>';
+  buttons[cat[0]] = b;
+  b.addEventListener('click', buttonClick);
+});
+
+switchPalette('motion');
 
 var w = new vis.Workspace(document.querySelector('.workspace'));
 app.add(w);
