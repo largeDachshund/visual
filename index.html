@@ -90,13 +90,13 @@ var vis = Visual({
 
 var app = new vis.App();
 
-var p = new vis.Workspace(document.querySelector('.palette'));
+var p = new vis.Palette(document.querySelector('.palette'));
 p.isPalette = true;
 app.add(p);
 
-p.add(20, 20, new vis.Script().add(new vis.Block('wait')));
-p.add(20, 60, new vis.Script().add(new vis.Block('if', [new vis.Block('equal')])));
-p.add(20, 130, new vis.Script().add(new vis.Block('ifElse')));
+p.add(new vis.Script().add(new vis.Block('wait')));
+p.add(new vis.Script().add(new vis.Block('if', [new vis.Block('equal')])));
+p.add(new vis.Script().add(new vis.Block('ifElse')));
 
 var w = new vis.Workspace(document.querySelector('.workspace'));
 app.add(w);

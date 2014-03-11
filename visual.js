@@ -1466,11 +1466,28 @@ function Visual(options) {
   Workspace.prototype.refill = function() {
     this.width = this.el.offsetWidth;
     this.height = this.el.offsetHeight;
-    var vw = this.width + this.scrollX + this.extraSpace;
-    var vh = this.height + this.scrollY + this.extraSpace;
+    var vw = this.isPalette ? 0 : this.width + this.scrollX + this.extraSpace;
+    var vh = this.isPalette ? 0 : this.height + this.scrollY + this.extraSpace;
 
     this.fill.style.width = Math.max(this.contentWidth, vw) + 'px';
     this.fill.style.height = Math.max(this.contentHeight, vh) + 'px';
+  };
+
+
+  function Palette(host) {
+    Workspace.call(this, host);
+  }
+
+  Palette.prototype = Object.create(Workspace.prototype);
+  Palette.prototype.constructor = Palette;
+
+  Palette.prototype.isPalette = true;
+  Palette.prototype.extraSpace = 20;
+  Palette.prototype.spacing = 10;
+
+  Palette.prototype.add = function(script) {
+    var y = this.scripts.length ? this.contentHeight - this.extraSpace + this.spacing : this.padding;
+    Workspace.prototype.add.call(this, this.padding, y, script);
   };
 
 
@@ -1576,6 +1593,16 @@ function Visual(options) {
     this.hideMenus(e);
     this.drop();
 
+    if (e.button === 2) {
+      var t = e.target;
+      var els = this.workspaces.concat(this.menus).map(function(w) {return w.el});
+      while (t) {
+        var n = t.tagName;
+        if (n === 'INPUT' || n === 'TEXTAREA' || t === 'SELECT') return;
+        t = t.parentNode;
+      }
+    }
+
     this.pressX = this.mouseX;
     this.pressY = this.mouseY;
     this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
@@ -1584,7 +1611,6 @@ function Visual(options) {
     if (this.pressObject) {
       if (e.button === 0) {
         this.shouldDrag = !(this.pressObject.isWorkspace || this.pressObject.isPalette || this.pressObject.isTextArg && document.activeElement === this.pressObject.field);
-        e.preventDefault();
 
       } else if (e.button === 2) {
         var cm = (this.pressObject || this).contextMenu;
@@ -2047,6 +2073,7 @@ function Visual(options) {
     Arg: Arg,
     Script: Script,
     Workspace: Workspace,
+    Palette: Palette,
     App: App,
     Menu: Menu
   };
