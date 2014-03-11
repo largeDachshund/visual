@@ -120,9 +120,9 @@ var vis = Visual({
     "heading:": ["c", "point in direction %d.direction", 1, 90],
     "pointTowards:": ["c", "point towards %m.spriteOrMouse", 1, ""],
 
-    "gotoX:y:": ["c", "go to x:%n y:%n", 1],
+    "gotoX:y:": ["c", "go to x:%n y:%n", 1, 0, 0],
     "gotoSpriteOrMouse:": ["c", "go to %m.spriteOrMouse", 1, "mouse-pointer"],
-    "glideSecs:toX:y:elapsed:from:": ["c", "glide %n secs to x:%n y:%n", 1],
+    "glideSecs:toX:y:elapsed:from:": ["c", "glide %n secs to x:%n y:%n", 1, 1, 0, 0],
 
     "changeXposBy:": ["c", "change x by %n", 1, 10],
     "xpos:": ["c", "set x to %n", 1, 0],
@@ -199,10 +199,10 @@ var vis = Visual({
     "putPenUp": ["c", "pen up", 4],
 
     "penColor:": ["c", "set pen color to %c", 4],
-    "changePenHueBy:": ["c", "change pen color by %n", 4],
+    "changePenHueBy:": ["c", "change pen color by %n", 4, 10],
     "setPenHueTo:": ["c", "set pen color to %n", 4, 0],
 
-    "changePenShadeBy:": ["c", "change pen shade by %n", 4],
+    "changePenShadeBy:": ["c", "change pen shade by %n", 4, 10],
     "setPenShadeTo:": ["c", "set pen shade to %n", 4, 50],
 
     "changePenSizeBy:": ["c", "change pen size by %n", 4, 1],
@@ -216,9 +216,9 @@ var vis = Visual({
 
     "whenSensorGreaterThan": ["h", "when %m.triggerSensor > %n", 5, "loudness", 10],
 
-    "whenIReceive": ["h", "when I receive %m.broadcast", 5, ""],
-    "broadcast:": ["c", "broadcast %m.broadcast", 5, ""],
-    "doBroadcastAndWait": ["c", "broadcast %m.broadcast and wait", 5, ""],
+    "whenIReceive": ["h", "when I receive %m.broadcast", 5, "message1"],
+    "broadcast:": ["c", "broadcast %m.broadcast", 5, "message1"],
+    "doBroadcastAndWait": ["c", "broadcast %m.broadcast and wait", 5, "message1"],
 
     // control - sprite
     "wait:elapsed:from:": ["c", "wait %n secs", 6, 1],
@@ -234,7 +234,7 @@ var vis = Visual({
     "stopScripts": ["f", "stop %m.stop", 6, "all"],
 
     "whenCloned": ["h", "when I start as a clone", 6],
-    "createCloneOf": ["c", "create clone of %m.spriteOnly", 6],
+    "createCloneOf": ["c", "create clone of %m.spriteOnly", 6, 'myself'],
     "deleteClone": ["f", "delete this clone", 6],
 
     // sensing
@@ -253,14 +253,14 @@ var vis = Visual({
 
     "soundLevel": ["r", "loudness", 7],
 
-    "senseVideoMotion": ["r", "video %m.videoMotionType on %m.stageOrThis", 7, "motion"],
+    "senseVideoMotion": ["r", "video %m.videoMotionType on %m.stageOrThis", 7, "motion", 'this sprite'],
     "setVideoState": ["c", "turn video %m.videoState", 7, "on"],
     "setVideoTransparency": ["c", "set video transparency to %n%", 7, 50],
 
     "timer": ["r", "timer", 7],
     "timerReset": ["c", "reset timer", 7],
 
-    "getAttribute:of:": ["r", "%m.attribute of %m.spriteOrStage", 7],
+    "getAttribute:of:": ["r", "%m.attribute of %m.spriteOrStage", 7, 'x position', 'Sprite1'],
 
     "timeAndDate": ["r", "current %m.timeAndDate", 7, "minute"],
     "timestamp": ["r", "days since 2000", 7],
@@ -292,24 +292,24 @@ var vis = Visual({
     "computeFunction:of:": ["r", "%m.mathOp of %n", 8, "sqrt", 9],
 
     // variables
-    "setVar:to:": ["c", "set %m.var to %s", 9],
-    "changeVar:by:": ["c", "change %m.var by %n", 9],
-    "showVariable:": ["c", "show variable %m.var", 9],
-    "hideVariable:": ["c", "hide variable %m.var", 9],
+    "setVar:to:": ["c", "set %m.var to %s", 9, 'variable', 0],
+    "changeVar:by:": ["c", "change %m.var by %n", 9, 'variable', 1],
+    "showVariable:": ["c", "show variable %m.var", 9, 'variable'],
+    "hideVariable:": ["c", "hide variable %m.var", 9, 'variable'],
 
     // lists
-    "append:toList:": ["c", "add %s to %m.list", 12],
+    "append:toList:": ["c", "add %s to %m.list", 12, 'thing', 'list'],
 
-    "deleteLine:ofList:": ["c", "delete %d.listDeleteItem of %m.list", 12],
-    "insert:at:ofList:": ["c", "insert %s at %d.listItem of %m.list", 12],
-    "setLine:ofList:to:": ["c", "replace item %d.listItem of %m.list with %s", 12],
+    "deleteLine:ofList:": ["c", "delete %d.listDeleteItem of %m.list", 12, '1', 'list'],
+    "insert:at:ofList:": ["c", "insert %s at %d.listItem of %m.list", 12, 'thing', '1', 'list'],
+    "setLine:ofList:to:": ["c", "replace item %d.listItem of %m.list with %s", 12, '1', 'list', 'thing'],
 
-    "getLine:ofList:": ["r", "item %d.listItem of %m.list", 12],
-    "lineCountOfList:": ["r", "length of %m.list", 12],
-    "list:contains:": ["b", "%m.list contains %s", 12],
+    "getLine:ofList:": ["r", "item %d.listItem of %m.list", 12, '1', 'list'],
+    "lineCountOfList:": ["r", "length of %m.list", 12, 'list'],
+    "list:contains:": ["b", "%m.list contains %s", 12, 'list', 'thing'],
 
-    "showList:": ["c", "show list %m.list", 12],
-    "hideList:": ["c", "hide list %m.list", 12],
+    "showList:": ["c", "show list %m.list", 12, 'list'],
+    "hideList:": ["c", "hide list %m.list", 12, 'list'],
 
     // obsolete blocks from Scratch 1.4 that may be used in older projects
     "drum:duration:elapsed:from:": ["c", "play drum %n for %n beats", 98, 1, 0.25], // Scratch 1.4 MIDI drum
@@ -347,6 +347,21 @@ var vis = Visual({
   menus: {
     var: function() {
       return new vis.Menu('variable', 'another', vis.Menu.line, 'local')
+    },
+    list: function() {
+      return new vis.Menu('list', 'another', vis.Menu.line, 'local')
+    },
+    key: function() {
+      var m = new vis.Menu('up arrow', 'down arrow', 'left arrow', 'right arrow', 'space');
+      var z = 'z'.charCodeAt(0);
+      for (var i = 'a'.charCodeAt(0); i <= z; i++) {
+        m.add(String.fromCharCode(i));
+      }
+      var nine = '9'.charCodeAt(0);
+      for (var i = '0'.charCodeAt(0); i <= nine; i++) {
+        m.add(String.fromCharCode(i));
+      }
+      return m;
     }
   }
 });
