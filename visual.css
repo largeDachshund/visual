@@ -43,6 +43,7 @@ body.Visual-workspace {
 }
 
 .Visual-script-dragging {
+  position: fixed;
   z-index: 1;
 }
 
@@ -51,6 +52,10 @@ body.Visual-workspace {
 .Visual-color-field {
   opacity: 0;
   pointer-events: auto;
+}
+
+.Visual-script-dragging .Visual-color-field {
+  pointer-events: none;
 }
 
 .Visual-field {

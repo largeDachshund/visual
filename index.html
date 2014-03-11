@@ -62,7 +62,10 @@ var vis = Visual({
   }
 });
 
+var app = new vis.App();
+
 var w = new vis.Workspace(document.body);
+app.add(w);
 
 w.add(20, 20, new vis.Script()
   .add(new vis.Block('repeat', [10, new vis.Script()

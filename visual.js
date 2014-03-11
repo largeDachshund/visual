@@ -57,6 +57,14 @@ function Visual(options) {
     return o;
   }
 
+  function getApp() {
+    var o = this;
+    while (o && !o.isApp) {
+      o = o.parent;
+    }
+    return o;
+  }
+
   function getWorkspacePosition() {
     var o = this;
     var x = 0;
@@ -179,11 +187,7 @@ function Visual(options) {
   var PI = Math.PI;
   var PI32 = Math.PI * 3/2;
 
-  Block.prototype.isArg = false;
   Block.prototype.isBlock = true;
-  Block.prototype.isIcon = false;
-  Block.prototype.isScript = false;
-  Block.prototype.isWorkspace = false;
 
   Block.prototype.parent = null;
   Block.prototype.dirty = true;
@@ -297,6 +301,7 @@ function Visual(options) {
     }
   });
 
+  def(Block.prototype, 'app', {get: getApp});
   def(Block.prototype, 'workspace', {get: getWorkspace});
   def(Block.prototype, 'workspacePosition', {get: getWorkspacePosition});
 
@@ -317,6 +322,8 @@ function Visual(options) {
   }});
 
   def(Block.prototype, 'dragObject', {get: function() {return this}}),
+
+  Block.prototype.click = function() {};
 
   Block.prototype.acceptsDropOf = function(b) {
     if (!this.parent || !this.parent.isBlock) return;
@@ -609,15 +616,11 @@ function Visual(options) {
 
   Label.measure = metrics('Visual-label');
 
-  Label.prototype.isArg = false;
-  Label.prototype.isBlock = false;
-  Label.prototype.isIcon = false;
-  Label.prototype.isScript = false;
-  Label.prototype.isWorkspace = false;
+  Label.prototype.isLabel = true;
 
+  Label.prototype.parent = null;
   Label.prototype.x = 0;
   Label.prototype.y = 0;
-  Label.prototype.parent = null;
   Label.prototype.dirty = false;
 
   def(Label.prototype, 'text', {
@@ -631,6 +634,7 @@ function Visual(options) {
     }
   });
 
+  def(Label.prototype, 'app', {get: getApp});
   def(Label.prototype, 'workspace', {get: getWorkspace});
   def(Label.prototype, 'workspacePosition', {get: getWorkspacePosition});
 
@@ -648,15 +652,14 @@ function Visual(options) {
     this.name = name;
   }
 
-  Icon.prototype.isArg = false;
-  Icon.prototype.isBlock = false;
   Icon.prototype.isIcon = true;
-  Icon.prototype.isScript = false;
-  Icon.prototype.isWorkspace = false;
 
   Icon.prototype.parent = null;
+  Icon.prototype.x = 0;
+  Icon.prototype.y = 0;
   Icon.prototype.dirty = true;
 
+  def(Icon.prototype, 'app', {get: getApp});
   def(Icon.prototype, 'workspace', {get: getWorkspace});
   def(Icon.prototype, 'workspacePosition', {get: getWorkspacePosition});
 
@@ -732,12 +735,10 @@ function Visual(options) {
   };
 
   Arg.prototype.isArg = true;
-  Arg.prototype.isBlock = false;
-  Arg.prototype.isIcon = false;
-  Arg.prototype.isScript = false;
-  Arg.prototype.isWorkspace = false;
 
   Arg.prototype.parent = null;
+  Arg.prototype.x = 0;
+  Arg.prototype.y = 0;
   Arg.prototype.dirty = true;
 
   def(Arg.prototype, 'value', {
@@ -839,12 +840,21 @@ function Visual(options) {
     }
   });
 
+  def(Arg.prototype, 'app', {get: getApp});
   def(Arg.prototype, 'workspace', {get: getWorkspace});
   def(Arg.prototype, 'workspacePosition', {get: getWorkspacePosition});
 
   def(Arg.prototype, 'contextMenu', {get: function() {return this.parent.contextMenu}});
 
   def(Arg.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
+
+  Arg.prototype.click = function() {
+    if (this._type === 'm') {
+      // TODO
+    } else if (this.isTextArg) {
+      this.field.select();
+    }
+  };
 
   Arg.prototype.acceptsDropOf = function(b) {
     return 'cmt'.indexOf(this.type) === -1 && (this.type !== 'b' || b.isBoolean);
@@ -1008,15 +1018,14 @@ function Visual(options) {
     this.height = 0;
   }
 
-  Script.prototype.isArg = false;
-  Script.prototype.isBlock = false;
-  Script.prototype.isIcon = false;
   Script.prototype.isScript = true;
-  Script.prototype.isWorkspace = false;
 
   Script.prototype.parent = null;
+  Script.prototype.x = 0;
+  Script.prototype.y = 0;
   Script.prototype.dirty = true;
 
+  def(Script.prototype, 'app', {get: getApp});
   def(Script.prototype, 'workspace', {get: getWorkspace});
   def(Script.prototype, 'workspacePosition', {get: getWorkspacePosition});
 
@@ -1094,7 +1103,7 @@ function Visual(options) {
     var f = document.createDocumentFragment();
 
     var length = blocks.length;
-    for (;i < length; i++) {
+    for (; i < length; i++) {
       var b = blocks[i];
       b.parent = script;
       f.appendChild(b.el);
@@ -1287,15 +1296,7 @@ function Visual(options) {
 
     this.el.appendChild(this.fill = el('Visual-absolute'));
 
-    this.el.addEventListener('mousedown', this.press.bind(this));
     this.el.addEventListener('contextmenu', this.disableContextMenu.bind(this));
-    document.addEventListener('mousemove', this.drag.bind(this));
-    document.addEventListener('mouseup', this.mouseUp.bind(this));
-
-    this.feedback = el('canvas', 'Visual-absolute Visual-feedback');
-    this.feedbackContext = this.feedback.getContext('2d');
-    this.feedback.style.display = 'none';
-    this.el.appendChild(this.feedback);
 
     this.scripts = [];
 
@@ -1309,10 +1310,6 @@ function Visual(options) {
     this.layout();
   }
 
-  Workspace.prototype.isArg = false;
-  Workspace.prototype.isBlock = false;
-  Workspace.prototype.isIcon = false;
-  Workspace.prototype.isScript = false;
   Workspace.prototype.isWorkspace = true;
 
   Workspace.prototype.parent = null;
@@ -1320,6 +1317,7 @@ function Visual(options) {
   Workspace.prototype.padding = 20;
   Workspace.prototype.extraSpace = 100;
 
+  def(Workspace.prototype, 'app', {get: getApp});
   def(Workspace.prototype, 'workspace', {get: function() {return this}});
   def(Workspace.prototype, 'workspacePosition', {get: function() {return {x: 0, y: 0}}});
 
@@ -1356,6 +1354,7 @@ function Visual(options) {
   };
 
   Workspace.prototype.objectFromPoint = function(x, y) {
+    if (!containsPoint(this, x, y)) return null;
     var scripts = this.scripts;
     for (var i = scripts.length; i--;) {
       var script = scripts[i];
@@ -1370,60 +1369,303 @@ function Visual(options) {
     if (t !== 'INPUT' && t !== 'TEXTAREA' && t !== 'SELECT') e.preventDefault();
   };
 
-  Workspace.prototype.press = function(e) {
+  Workspace.prototype.scroll = function() {
+    if (this.el === document.body) {
+      this.scrollX = window.scrollX;
+      this.scrollY = window.scrollY;
+    } else {
+      this.scrollX = this.el.scrollLeft;
+      this.scrollY = this.el.scrollTop;
+    }
+    this.refill();
+  };
+
+  Workspace.prototype.layout = function() {
+    var p = this.padding;
+    var x = p;
+    var y = p;
+    var width = 0;
+    var height = 0;
+
+    var scripts = this.scripts;
+    for (var i = scripts.length; i--;) {
+      var script = scripts[i];
+      if (script === this.dragScript) return;
+      if (script.blocks.length === 0) {
+        this.remove(script);
+        continue;
+      }
+      x = Math.min(x, script.x);
+      y = Math.min(y, script.y);
+      width = Math.max(width, script.x - x + script.width);
+      height = Math.max(height, script.y - y + script.height);
+    }
+
+    if (x < p || y < p) {
+      x -= p;
+      y -= p;
+      this.scripts.forEach(function(script) {
+        script.moveTo(script.x - x, script.y - y);
+      });
+      width -= x;
+      height -= y;
+    } else {
+      width += x;
+      height += y;
+    }
+
+    width += this.extraSpace;
+    height += this.extraSpace;
+
+    this.width = width;
+    this.height = height;
+
+    this.refill();
+  };
+
+  Workspace.prototype.refill = function() {
+    var vw = this.el.offsetWidth + this.scrollX + this.extraSpace;
+    var vh = this.el.offsetHeight + this.scrollY + this.extraSpace;
+
+    this.fill.style.width = Math.max(this.width, vw) + 'px';
+    this.fill.style.height = Math.max(this.height, vh) + 'px';
+  };
+
+
+  function App() {
+    this.workspaces = [];
+    this.palettes = [];
+    this.menus = [];
+
+    this.feedback = el('canvas', 'Visual-absolute Visual-feedback');
+    this.feedbackContext = this.feedback.getContext('2d');
+    this.feedback.style.display = 'none';
+    document.body.appendChild(this.feedback);
+
+    document.addEventListener('mousedown', this.mouseDown.bind(this), true);
+    document.addEventListener('mousemove', this.mouseMove.bind(this));
+    document.addEventListener('mouseup', this.mouseUp.bind(this), true);
+  }
+
+  App.prototype.isApp = true;
+
+  App.prototype.parent = null;
+
+  def(App.prototype, 'app', {get: function() {return this}});
+
+  App.prototype.objectFromPoint = function(x, y) {
+    var workspaces = this.workspaces;
+    for (var i = workspaces.length; i--;) {
+      var w = workspaces[i];
+      var bb = w.el.getBoundingClientRect();
+      var o = w.objectFromPoint(x - Math.round(bb.left), y - Math.round(bb.top));
+      if (o) return o;
+    }
+    return null;
+  };
+
+  App.prototype.layout = function() {};
+
+  App.prototype.add = function(thing) {
+    if (thing.parent) thing.parent.remove(thing);
+
+    thing.parent = this;
+    if (thing.isPalette) {
+      this.palettes.push(thing);
+    }
+    if (thing.isWorkspace) {
+      this.workspaces.push(thing);
+    }
+    if (thing.isMenu) {
+      this.menus.push(thing);
+      document.body.appendChild(thing.el);
+    }
+    return this;
+  };
+
+  App.prototype.remove = function(thing) {
+    if (thing.parent !== this) return this;
+    thing.parent = null;
+
+    var array =
+      thing.isWorkspace ? this.workspaces :
+      thing.isPalette ? this.palettes :
+      thing.isMenu ? this.menus : [];
+    var i = array.indexOf(thing);
+    array.splice(i, 1);
+
+    if (thing.isMenu) {
+      thing.el.parentNode.removeChild(thing.el);
+    }
+
+    return this;
+  };
+
+  App.prototype.grab = function(script, offsetX, offsetY) {
     this.drop();
-    this.updateMouse(e);
-    this.pressX = this.mouseX;
-    this.pressY = this.mouseY;
-    this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
-
-    this.shouldDrag = e.button === 0 && this.pressObject && !(this.pressObject.isTextArg && document.activeElement === this.pressObject.field);
-    if (e.button === 2) {
-      e.preventDefault();
-      var cm = (this.pressObject || this).contextMenu;
-      if (cm) cm.show(this);
-    }
-    this.pressed = true;
-    this.dragging = false;
-  };
-
-  Workspace.prototype.drag = function(e) {
-    if (e) this.updateMouse(e);
-
-    if (this.dragging) {
-      this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
-      this.updateFeedback();
-      if (e) e.preventDefault();
-    } else if (this.pressed && this.shouldDrag) {
-      var block = this.pressObject.dragObject;
-      var pos = block.workspacePosition;
-      this.grab(block.detach(), pos.x - this.pressX, pos.y - this.pressY);
-      e.preventDefault();
-    }
-  };
-
-  Workspace.prototype.grab = function(script, offsetX, offsetY) {
-    if (this.dragging) {
-      this.drop();
-    }
     this.dragging = true;
 
     if (offsetX === undefined) {
-      var pos = script.workspacePosition;
+      var pos = script.worldPosition;
       offsetX = pos.x - this.pressX;
       offsetY = pos.y - this.pressY;
     }
     this.dragX = offsetX;
     this.dragY = offsetY;
 
+    if (script.parent) {
+      script.parent.remove(script);
+    }
+
     this.dragScript = script;
     this.dragScript.el.classList.add('Visual-script-dragging');
-    this.add(this.dragX + this.mouseX, this.dragY + this.mouseY, this.dragScript);
+    this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
+    this.dragScript.parent = this;
+    this.dragScript.layout();
+    document.body.appendChild(this.dragScript.el);
     this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
     this.updateFeedback();
   };
 
-  Workspace.prototype.updateFeedback = function() {
+  App.prototype.mouseDown = function(e) {
+    this.updateMouse(e);
+
+    this.hideMenus(e);
+    this.drop();
+
+    this.pressX = this.mouseX;
+    this.pressY = this.mouseY;
+    this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
+    this.shouldDrag = false;
+
+    if (this.pressObject) {
+      if (e.button === 0) {
+        this.shouldDrag = !(this.pressObject.isWorkspace || this.pressObject.isPalette || this.pressObject.isTextArg && document.activeElement === this.pressObject.field);
+        e.preventDefault();
+
+      } else if (e.button === 2) {
+        var cm = (this.pressObject || this).contextMenu;
+        if (cm) cm.show(this);
+        e.preventDefault();
+      }
+    }
+
+    this.pressed = true;
+    this.dragging = false;
+  };
+
+  App.prototype.mouseMove = function(e) {
+    this.updateMouse(e);
+
+    if (this.dragging) {
+      this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
+      this.updateFeedback();
+      e.preventDefault();
+    } else if (this.pressed && this.shouldDrag) {
+      var block = this.pressObject.dragObject;
+      this.dragWorkspace = block.workspace;
+      this.dragPos = block.workspacePosition;
+      this.grab(block.detach(), this.dragPos.x - this.pressX, this.dragPos.y - this.pressY);
+      e.preventDefault();
+    }
+  };
+
+  App.prototype.mouseUp = function(e) {
+    this.updateMouse(e);
+
+    if (this.dragging) {
+      this.drop();
+    } else if (this.shouldDrag) {
+      this.pressObject.click();
+    }
+
+    this.pressed = false;
+    this.pressObject = null;
+
+    this.dragging = false
+    this.shouldDrag = false;
+    this.dragScript = null;
+  };
+
+  App.prototype.hideMenus = function(e) {
+    if (!this.menus.length) return;
+
+    var t = e.target;
+    var els = this.menus.map(function(m) {return m.el});
+    while (t) {
+      if (els.indexOf(t) === 0) return;
+      t = t.parentNode;
+    }
+
+    this.menus.forEach(function(m) {
+      m.el.parentNode.removeChild(m.el);
+      m.parent = null;
+    });
+    this.menus = [];
+  };
+
+  App.prototype.updateMouse = function(e) {
+    this.mouseX = e.clientX;
+    this.mouseY = e.clientY;
+  };
+
+  App.prototype.drop = function() {
+    if (!this.dragging) return;
+
+    document.body.removeChild(this.dragScript.el);
+    this.dragScript.parent = null;
+    this.dragScript.el.classList.remove('Visual-script-dragging');
+    this.dragScript.removeShadow();
+    this.feedback.style.display = 'none';
+
+    if (this.feedbackInfo) {
+      this.applyDrop(this.feedbackInfo);
+    } else {
+      var workspaces = this.workspaces;
+      for (var i = workspaces.length; i--;) {
+        var ws = workspaces[i];
+        var bb = ws.el.getBoundingClientRect();
+        var x = Math.round(bb.left);
+        var y = Math.round(bb.top);
+        var w = Math.round(bb.right - x);
+        var h = Math.round(bb.bottom - y);
+        if (this.mouseX >= x && this.mouseX < x + w && this.mouseY >= x && this.mouseY < y + h) {
+          if (!ws.isPalette) {
+            console.log(this.dragX + this.mouseX, x, this.dragY + this.mouseY, y);
+            ws.add(this.dragX + this.mouseX - x, this.dragY + this.mouseY - y, this.dragScript);
+          }
+          break;
+        }
+      }
+      if (this.dragWorkspace && !this.dragWorkspace.isPalette && !this.dragScript.parent) {
+        this.dragWorkspace.add(this.dragPos.x, this.dragPos.y, this.dragScript);
+      }
+    }
+
+    this.dragScript = null;
+  };
+
+  App.prototype.applyDrop = function(info) {
+    switch (info.type) {
+      case 'append':
+        info.script.add(this.dragScript);
+        return;
+      case 'insert':
+        info.script.insert(this.dragScript, info.block);
+        return;
+      case 'replace':
+        if (info.arg.isBlock) {
+          var pos = info.arg.workspacePosition;
+        }
+        info.block.replace(info.arg, this.dragScript.blocks[0]);
+        if (info.arg.isBlock) {
+          info.block.workspace.add(pos.x + 20, pos.y + 20, new Script().add(info.arg));
+        }
+        return;
+    }
+  };
+
+  App.prototype.updateFeedback = function() {
     this.resetFeedback();
     if (this.dragScript.isReporter) {
       this.showReporterFeedback();
@@ -1438,27 +1680,40 @@ function Visual(options) {
     }
   };
 
-  Workspace.prototype.resetFeedback = function() {
+  App.prototype.resetFeedback = function() {
     this.feedbackDistance = Infinity;
     this.feedbackInfo = null;
   };
 
-  Workspace.prototype.commandFeedbackRange = 70;
-  Workspace.prototype.feedbackRange = 20;
+  App.prototype.commandFeedbackRange = 70;
+  App.prototype.feedbackRange = 20;
 
-  Workspace.prototype.showCommandFeedback = function() {
+  App.prototype.showCommandFeedback = function() {
     this.commandHasHat = this.dragScript.hasHat;
     this.commandHasFinal = this.dragScript.hasFinal;
-    var scripts = this.scripts;
-    var length = scripts.length;
+    this.showFeedback(this.addScriptCommandFeedback);
+  };
+
+  App.prototype.showReporterFeedback = function() {
+    this.showFeedback(this.addScriptReporterFeedback);
+  };
+
+  App.prototype.showFeedback = function(p) {
+    var workspaces = this.workspaces;
+    var length = workspaces.length;
     for (var i = 0; i < length; i++) {
-      if (scripts[i] !== this.dragScript) {
-        this.addScriptCommandFeedback(0, 0, scripts[i]);
+      var w = workspaces[i];
+      if (!w.isPalette) {
+        var scripts = w.scripts;
+        var l = scripts.length;
+        for (var j = 0; j < l; j++) {
+          p.call(this, 0, 0, scripts[j]);
+        }
       }
     }
   };
 
-  Workspace.prototype.addScriptCommandFeedback = function(x, y, script) {
+  App.prototype.addScriptCommandFeedback = function(x, y, script) {
     x += script.x;
     y += script.y;
     if (!script.hasFinal && !script.isReporter) {
@@ -1478,7 +1733,7 @@ function Visual(options) {
     }
   };
 
-  Workspace.prototype.addBlockCommandFeedback = function(x, y, block, isTop) {
+  App.prototype.addBlockCommandFeedback = function(x, y, block, isTop) {
     y += block.y;
     x += block.x;
     var args = block.args;
@@ -1503,17 +1758,7 @@ function Visual(options) {
     });
   };
 
-  Workspace.prototype.showReporterFeedback = function() {
-    var scripts = this.scripts;
-    var length = scripts.length;
-    for (var i = 0; i < length; i++) {
-      if (scripts[i] !== this.dragScript) {
-        this.addScriptReporterFeedback(0, 0, scripts[i]);
-      }
-    }
-  };
-
-  Workspace.prototype.addScriptReporterFeedback = function(x, y, script) {
+  App.prototype.addScriptReporterFeedback = function(x, y, script) {
     x += script.x;
     y += script.y;
     var blocks = script.blocks;
@@ -1523,7 +1768,7 @@ function Visual(options) {
     }
   };
 
-  Workspace.prototype.addBlockReporterFeedback = function(x, y, block) {
+  App.prototype.addBlockReporterFeedback = function(x, y, block) {
     x += block.x;
     y += block.y;
     var args = block.args;
@@ -1553,7 +1798,7 @@ function Visual(options) {
     }
   };
 
-  Workspace.prototype.addFeedback = function(obj) {
+  App.prototype.addFeedback = function(obj) {
     var dx = obj.x - this.dragScript.x;
     var dy = obj.y - this.dragScript.y;
     var d2 = dx * dx + dy * dy;
@@ -1562,9 +1807,9 @@ function Visual(options) {
     this.feedbackInfo = obj;
   };
 
-  Workspace.prototype.feedbackLineWidth = 6;
+  App.prototype.feedbackLineWidth = 6;
 
-  Workspace.prototype.renderFeedback = function(info) {
+  App.prototype.renderFeedback = function(info) {
     var canvas = this.feedback;
     var context = this.feedbackContext;
     var b = this.dragScript.blocks[0];
@@ -1645,133 +1890,6 @@ function Visual(options) {
     }
   };
 
-  Workspace.prototype.mouseUp = function(e) {
-    this.updateMouse(e);
-    if (this.dragging) {
-      this.drop();
-    } else if (this.shouldDrag) {
-      if (this.pressObject.isArg) {
-        if (this.pressObject._type === 'm') {
-
-        } else if (this.pressObject.field) {
-          this.pressObject.field.select();
-        }
-      }
-    }
-    this.dragging = false;
-    this.pressed = false;
-  };
-
-  Workspace.prototype.drop = function() {
-    if (!this.dragging) return;
-    if (this.feedbackInfo) this.applyDrop(this.feedbackInfo);
-
-    this.dragScript.el.classList.remove('Visual-script-dragging');
-    this.dragScript.removeShadow();
-    this.feedback.style.display = 'none';
-
-    this.dragScript = null;
-    this.layout();
-  };
-
-  Workspace.prototype.applyDrop = function(info) {
-    switch (info.type) {
-      case 'append':
-        info.script.add(this.dragScript);
-        return;
-      case 'insert':
-        info.script.insert(this.dragScript, info.block);
-        return;
-      case 'replace':
-        if (info.arg.isBlock) {
-          var pos = info.arg.workspacePosition;
-        }
-        info.block.replace(info.arg, this.dragScript.blocks[0]);
-        if (info.arg.isBlock) {
-          this.add(pos.x + 20, pos.y + 20, new Script().add(info.arg));
-        }
-        return;
-    }
-  };
-
-  Workspace.prototype.getScroll = function() {
-    if (this.el === document.body) {
-      return {x: window.scrollX, y: window.scrollY};
-    }
-    return {x: this.el.scrollLeft, y: this.el.scrollTop};
-  };
-
-  Workspace.prototype.updateMouse = function(e) {
-    var bb = this.el.getBoundingClientRect();
-    this.mouseX = e.clientX - bb.left;
-    this.mouseY = e.clientY - bb.top;
-    var scroll = this.getScroll();
-    this.scrollX = scroll.x;
-    this.scrollY = scroll.y;
-  };
-
-  Workspace.prototype.scroll = function() {
-    var scroll = this.getScroll();
-    this.mouseX += scroll.x - this.scrollX;
-    this.mouseY += scroll.y - this.scrollY;
-    this.scrollX = scroll.x;
-    this.scrollY = scroll.y;
-    this.drag();
-    this.refill();
-  };
-
-  Workspace.prototype.layout = function() {
-    var p = this.padding;
-    var x = p;
-    var y = p;
-    var width = 0;
-    var height = 0;
-
-    var scripts = this.scripts;
-    for (var i = scripts.length; i--;) {
-      var script = scripts[i];
-      if (script === this.dragScript) return;
-      if (script.blocks.length === 0) {
-        this.remove(script);
-        continue;
-      }
-      x = Math.min(x, script.x);
-      y = Math.min(y, script.y);
-      width = Math.max(width, script.x - x + script.width);
-      height = Math.max(height, script.y - y + script.height);
-    }
-
-    if (x < p || y < p) {
-      x -= p;
-      y -= p;
-      this.scripts.forEach(function(script) {
-        script.moveTo(script.x - x, script.y - y);
-      });
-      width -= x;
-      height -= y;
-    } else {
-      width += x;
-      height += y;
-    }
-
-    width += this.extraSpace;
-    height += this.extraSpace;
-
-    this.width = width;
-    this.height = height;
-
-    this.refill();
-  };
-
-  Workspace.prototype.refill = function() {
-    var scroll = this.getScroll();
-    var vw = this.el.offsetWidth + scroll.x + this.extraSpace;
-    var vh = this.el.offsetHeight + scroll.y + this.extraSpace;
-
-    this.fill.style.width = Math.max(this.width, vw) + 'px';
-    this.fill.style.height = Math.max(this.height, vh) + 'px';
-  };
-
 
   function Menu(items) {
     this.el = el('Visual-menu');
@@ -1787,11 +1905,18 @@ function Visual(options) {
       this.add(items[i]);
     }
 
-    this.documentMouseDown = this.documentMouseDown.bind(this);
-    this.mouseUp = this.mouseUp.bind(this);
+    this.el.addEventListener('mouseup', this.mouseUp.bind(this), true);
   }
 
   Menu.line = {};
+
+  Menu.prototype.isMenu = true;
+
+  Menu.prototype.parent = null;
+  Menu.prototype.x = 0;
+  Menu.prototype.y = 0;
+
+  def(Menu.prototype, 'app', {get: getApp});
 
   Menu.prototype.withAction = function(action, context) {
     this.action = action;
@@ -1817,15 +1942,9 @@ function Visual(options) {
     }
   };
 
-  Menu.prototype.show = function(ws) {
-    this.workspace = ws;
-    var bb = ws.el.getBoundingClientRect();
-    this.x = bb.left + ws.mouseX;
-    this.y = bb.top + ws.mouseY;
-    setTransform(this.el, 'translate('+this.x+'px, '+this.y+'px)');
-    document.body.appendChild(this.el);
-    document.addEventListener('mousedown', this.documentMouseDown, true);
-    this.el.addEventListener('mouseup', this.mouseUp, true);
+  Menu.prototype.show = function(app) {
+    this.moveTo(app.mouseX, app.mouseY);
+    app.add(this);
   };
 
   Menu.prototype.mouseUp = function(e) {
@@ -1834,22 +1953,10 @@ function Visual(options) {
       if (t.parentNode === this.el && t.dataset.index) {
         var i = t.dataset.index;
         this.commit(i);
-      }
-      t = t.parentNode;
-    }
-    e.stopPropagation();
-  };
-
-  Menu.prototype.documentMouseDown = function(e) {
-    var t = e.target;
-    while (t) {
-      if (t === this.el) {
         e.stopPropagation();
-        return;
       }
       t = t.parentNode;
     }
-    this.hide();
   };
 
   Menu.prototype.commit = function(index) {
@@ -1863,10 +1970,10 @@ function Visual(options) {
   };
 
   Menu.prototype.hide = function() {
-    if (this.el.parentNode) {
-      this.el.parentNode.removeChild(this.el);
-    }
+    this.app.remove(this);
   };
+
+  Menu.prototype.moveTo = moveTo;
 
 
   return {
@@ -1876,6 +1983,7 @@ function Visual(options) {
     Arg: Arg,
     Script: Script,
     Workspace: Workspace,
+    App: App,
     Menu: Menu
   };
 }
