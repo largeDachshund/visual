@@ -1394,7 +1394,7 @@ function Visual(options) {
   };
 
   Workspace.prototype.objectFromPoint = function(x, y) {
-    if (!containsPoint(this, x, y)) return null;
+    if (x < this.scrollX || y < this.scrollY || x > this.scrollX + this.width || y > this.scrollY + this.height) return null;
     var scripts = this.scripts;
     for (var i = scripts.length; i--;) {
       var script = scripts[i];
@@ -1452,18 +1452,20 @@ function Visual(options) {
     width += this.extraSpace;
     height += this.extraSpace;
 
-    this.width = width;
-    this.height = height;
+    this.contentWidth = width;
+    this.contentHeight = height;
 
     this.refill();
   };
 
   Workspace.prototype.refill = function() {
-    var vw = this.el.offsetWidth + this.scrollX + this.extraSpace;
-    var vh = this.el.offsetHeight + this.scrollY + this.extraSpace;
+    this.width = this.el.offsetWidth;
+    this.height = this.el.offsetHeight;
+    var vw = this.width + this.scrollX + this.extraSpace;
+    var vh = this.height + this.scrollY + this.extraSpace;
 
-    this.fill.style.width = Math.max(this.width, vw) + 'px';
-    this.fill.style.height = Math.max(this.height, vh) + 'px';
+    this.fill.style.width = Math.max(this.contentWidth, vw) + 'px';
+    this.fill.style.height = Math.max(this.contentHeight, vh) + 'px';
   };
 
 
