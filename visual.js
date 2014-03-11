@@ -201,13 +201,14 @@ function Visual(options) {
     this.args = args.concat(this.defaultArgs.slice(args.length));
 
     var category = info[3];
-    if (typeof category === 'string') category = options.getCategory(category);
+    if (typeof category !== 'object') category = options.getCategory(category);
 
     this.name = info[2];
     this.type = info[0];
     this.isHat = this.type === 'h';
     this.hasPuzzle = this.type === 'c' || this.type === 'h';
     this.isFinal = this.type === 'f';
+    this.isCommand = this.type === 'c' || this.type === 'f';
     this.isReporter = this.type === 'r' || this.type === 'b';
     this.isBoolean = this.type === 'b';
     this.spec = info[1];
@@ -257,7 +258,8 @@ function Visual(options) {
       context.lineTo(w, r);
       context.lineTo(w - r, h);
       context.lineTo(r, h);
-    }
+    },
+    h: function(context) {}
   };
 
   Block.prototype.pathCommandShape = function(bottom, context) {
@@ -529,7 +531,7 @@ function Visual(options) {
     var lp = this.linePadding;
     var sp = this.scriptPadding;
     var cmw = this.puzzle * 2 + this.puzzleInset + this.puzzleWidth;
-    var command = this.type === 'c';
+    var command = this.isCommand;
 
     var lines = [[]];
     var lineXs = [[0]];
@@ -572,7 +574,7 @@ function Visual(options) {
     if (!lines[line].length) {
       lineHeights[line] = 10;
     }
-    width += xp * 2;
+    width = Math.max(width + xp * 2, this.type === 'h' || this.hasScript ? 83 : command ? 39 : 0);
 
     var y = yp;
     length = lines.length;
@@ -1711,7 +1713,6 @@ function Visual(options) {
     this.menuMouseDown(e);
 
     var pressType = this.pressType(e);
-    console.log(e.target, pressType);
     if (pressType !== 'workspace' && (pressType !== 'input' || e.button === 2)) return;
 
     this.pressX = this.mouseX;
@@ -1927,7 +1928,7 @@ function Visual(options) {
   App.prototype.addScriptCommandFeedback = function(x, y, script) {
     x += script.x;
     y += script.y;
-    if (!script.hasFinal && !script.isReporter) {
+    if (!script.hasFinal && !script.isReporter && !this.commandHasHat) {
       this.addFeedback({
         x: x,
         y: y + script.height,
@@ -1953,7 +1954,7 @@ function Visual(options) {
       var a = args[i];
       if (a.isBlock) {
         this.addBlockCommandFeedback(x, y, a);
-      } else if (a._type === 't') {
+      } else if (a._type === 't' && !this.commandHasHat) {
         this.addScriptCommandFeedback(x + a.x, y + a.y, a.script);
       }
     }
