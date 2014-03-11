@@ -1358,12 +1358,13 @@ function Visual(options) {
 
     if (host.tagName === 'BODY' && host.parentNode) {
       host.parentNode.style.height = '100%';
-      window.addEventListener('resize', this.layout.bind(this));
+      window.addEventListener('resize', this.resize.bind(this));
       window.addEventListener('scroll', this.scroll.bind(this));
     } else {
       this.el.addEventListener('scroll', this.scroll.bind(this));
     }
 
+    this.resize();
     this.layout();
   }
 
@@ -1375,6 +1376,7 @@ function Visual(options) {
 
   Workspace.prototype.padding = 20;
   Workspace.prototype.extraSpace = 100;
+  Workspace.prototype.spacing = 20;
 
   def(Workspace.prototype, 'app', {get: getApp});
   def(Workspace.prototype, 'workspace', {get: function() {return this}});
@@ -1384,8 +1386,8 @@ function Visual(options) {
   def(Workspace.prototype, 'contextMenu', {get: function() {
     if (this.isPalette) return;
     return new Menu(
-      'Clean Up',
-      'Add Comment');
+      ['Clean Up', this.cleanUp],
+      'Add Comment').withContext(this);
   }});
 
   Workspace.prototype.add = function(x, y, script) {
@@ -1410,7 +1412,21 @@ function Visual(options) {
     var i = this.scripts.indexOf(script);
     this.scripts.splice(i, 1);
     this.el.removeChild(script.el);
+    this.layout();
 
+    return this;
+  };
+
+  Workspace.prototype.clear = function() {
+    var scripts = this.scripts;
+    for (var i = scripts.length; i--;) {
+      var s = scripts[i];
+      this.el.removeChild(s.el);
+      s.parent = null;
+    }
+    this.scripts = [];
+    this.contentWidth = this.contentHeight = this.padding + this.extraSpace;
+    this.refill();
     return this;
   };
 
@@ -1433,7 +1449,7 @@ function Visual(options) {
       this.scrollX = this.el.scrollLeft;
       this.scrollY = this.el.scrollTop;
     }
-    this.refill();
+    if (!this.isPalette) this.refill();
   };
 
   Workspace.prototype.layout = function() {
@@ -1479,14 +1495,32 @@ function Visual(options) {
     this.refill();
   };
 
-  Workspace.prototype.refill = function() {
+  Workspace.prototype.resize = function() {
     this.width = this.el.offsetWidth;
     this.height = this.el.offsetHeight;
-    var vw = this.isPalette ? 0 : this.width + this.scrollX + this.extraSpace;
-    var vh = this.isPalette ? 0 : this.height + this.scrollY + this.extraSpace;
+  };
+
+  Workspace.prototype.refill = function() {
+    var vw = this.width + this.scrollX + this.extraSpace;
+    var vh = this.height + this.scrollY + this.extraSpace;
 
     this.fill.style.width = Math.max(this.contentWidth, vw) + 'px';
     this.fill.style.height = Math.max(this.contentHeight, vh) + 'px';
+  };
+
+  Workspace.prototype.cleanUp = function() {
+    var scripts = this.scripts;
+    scripts.sort(function(a, b) {
+      return a.y - b.y;
+    });
+    var y = this.padding;
+    var length = scripts.length;
+    for (var i = 0; i < length; i++) {
+      var s = scripts[i];
+      s.moveTo(this.padding, y);
+      y += s.height + this.spacing;
+    }
+    this.layout();
   };
 
 
@@ -1501,9 +1535,66 @@ function Visual(options) {
   Palette.prototype.extraSpace = 20;
   Palette.prototype.spacing = 10;
 
+  Palette.prototype.cleanUp = undefined;
+
   Palette.prototype.add = function(script) {
+    if (script.parent) script.parent.remove(script);
+
     var y = this.scripts.length ? this.contentHeight - this.extraSpace + this.spacing : this.padding;
-    Workspace.prototype.add.call(this, this.padding, y, script);
+    script.moveTo(this.padding, y);
+
+    script.parent = this;
+    this.scripts.push(script);
+
+    script.layoutChildren();
+    this.contentWidth = Math.max(this.contentWidth, this.padding + script.width + this.extraSpace)
+    this.contentHeight = y + script.height + this.extraSpace;
+    this.refill();
+
+    this.el.appendChild(script.el);
+
+    return this;
+  };
+
+  Palette.prototype.insert = function(script, before) {
+    if (!before || before.parent !== this) return this.add(script);
+    if (script.parent) script.parent.remove(script);
+
+    script.parent = this;
+    var i = this.scripts.indexOf(before);
+    this.scripts.splice(i, 0, script);
+
+    script.layoutChildren();
+    this.el.appendChild(script.el);
+    this.layout();
+
+    return this;
+  };
+
+  Palette.prototype.refill = function() {
+    this.fill.style.width = this.contentWidth + 'px';
+    this.fill.style.height = this.contentHeight + 'px';
+  };
+
+  Palette.prototype.layout = function() {
+    var pd = this.padding;
+    var sp = this.spacing;
+    var es = this.extraSpace;
+
+    var y = pd;
+    var w = 0;
+    var scripts = this.scripts;
+    var length = scripts.length;
+    for (var i = 0; i < length; i++) {
+      var s = scripts[i];
+      s.moveTo(pd, y);
+      w = Math.max(w, s.width);
+      y += s.height + sp;
+    }
+
+    this.contentHeight = y - sp + es;
+    this.contentWidth = pd + w + es;
+    this.refill()
   };
 
 

@@ -103,6 +103,8 @@ p.add(new vis.Script().add(new vis.Block('wait')));
 p.add(new vis.Script().add(new vis.Block('if', [new vis.Block('equal')])));
 p.add(new vis.Script().add(new vis.Block('ifElse')));
 
+p.insert(new vis.Script().add(new vis.Block('play')), p.scripts[1]);
+
 var w = new vis.Workspace(document.querySelector('.workspace'));
 app.add(w);
 
