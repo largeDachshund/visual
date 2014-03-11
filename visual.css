@@ -38,6 +38,7 @@ body.Visual-workspace {
 .Visual-feedback {
   position: fixed;
   z-index: 1;
+  pointer-events: none;
 }
 
 /* Script */
