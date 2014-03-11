@@ -228,13 +228,15 @@ function Visual(options) {
   Block.prototype.puzzle = 3;
   Block.prototype.puzzleWidth = 9;
   Block.prototype.puzzleInset = 14;
+  Block.prototype.hatHeight = 12;
+  Block.prototype.hatWidth = 80;
 
   Block.prototype.pathBlockType = {
     c: function(context) {
-      this.pathCommandShape(true, context);
+      this.pathCommandShape(context, true, true);
     },
     f: function(context) {
-      this.pathCommandShape(false, context);
+      this.pathCommandShape(context, false, true);
     },
     r: function(context) {
       var w = this.ownWidth;
@@ -259,23 +261,39 @@ function Visual(options) {
       context.lineTo(w - r, h);
       context.lineTo(r, h);
     },
-    h: function(context) {}
+    h: function(context) {
+      var r = this.radius;
+      var p = this.puzzle;
+      var pi = this.puzzleInset;
+      var pw = this.puzzleWidth;
+      var w = this.ownWidth;
+      var h = this.ownHeight - p;
+      var hh = this.hatHeight;
+      var hw = this.hatWidth;
+      context.moveTo(0, hh);
+      context.quadraticCurveTo(.125*hw, .1*hh, hw/2, 0);
+      context.quadraticCurveTo(.875*hw, .1*hh, hw, hh);
+      context.arc(w - r, hh + r, r, PI32, 0, false);
+      this.pathCommandShape(context, true, false);
+    }
   };
 
-  Block.prototype.pathCommandShape = function(bottom, context) {
+  Block.prototype.pathCommandShape = function(context, bottom, top) {
     var r = this.radius;
     var p = this.puzzle;
     var pi = this.puzzleInset;
     var pw = this.puzzleWidth;
     var w = this.ownWidth;
     var h = this.ownHeight - bottom * p;
-    context.moveTo(0, r);
-    context.arc(r, r, r, PI, PI32, false);
-    context.lineTo(pi, 0);
-    context.lineTo(pi + p, p);
-    context.lineTo(pi + pw + p, p);
-    context.lineTo(pi + pw + p * 2, 0);
-    context.arc(w - r, r, r, PI32, 0, false);
+    if (top) {
+      context.moveTo(0, r);
+      context.arc(r, r, r, PI, PI32, false);
+      context.lineTo(pi, 0);
+      context.lineTo(pi + p, p);
+      context.lineTo(pi + pw + p, p);
+      context.lineTo(pi + pw + p * 2, 0);
+      context.arc(w - r, r, r, PI32, 0, false);
+    }
     context.arc(w - r, h - r, r, 0, PI12, false);
     if (bottom) {
       context.lineTo(pi + pw + p * 2, h);
@@ -576,7 +594,7 @@ function Visual(options) {
     }
     width = Math.max(width + xp * 2, this.type === 'h' || this.hasScript ? 83 : command ? 39 : 0);
 
-    var y = yp;
+    var y = this.isHat ? this.hatHeight + yp : yp;
     length = lines.length;
     for (i = 0; i < length; i++) {
       var line = lines[i];
