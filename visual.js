@@ -2189,7 +2189,7 @@ function Visual(options) {
     if (item === Menu.line) {
       this.el.appendChild(el('Visual-menu-line'));
     } else {
-      if (typeof item === 'string') item = [item, item];
+      if (typeof item !== 'object') item = [item, item];
       var i = el('Visual-menu-item');
       i.textContent = item[0];
       i.dataset.index = this.items.length;

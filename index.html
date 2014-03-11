@@ -455,6 +455,12 @@ var vis = Visual({
         ['(69) A', 69],
         ['(71) B', 71],
         ['(72) High C', 72]);
+    },
+    listItem: function() {
+      return new vis.Menu(1, 'last', 'random');
+    },
+    listDeleteItem: function() {
+      return new vis.Menu(1, 'last', vis.Menu.line, 'all');
     }
   }
 });
