@@ -1950,6 +1950,7 @@ function Visual(options) {
       this.addFeedback({
         x: x,
         y: y + script.height,
+        feedbackY: y + script.height,
         rangeX: this.commandFeedbackRange,
         rangeY: this.feedbackRange,
         type: 'append',
@@ -1979,7 +1980,8 @@ function Visual(options) {
     if (isTop && block.isHat || !isTop && this.commandHasHat || this.commandHasFinal || block.isReporter) return;
     this.addFeedback({
       x: x,
-      y: y,
+      y: isTop ? y - this.dragScript.height : y,
+      feedbackY: y,
       rangeX: this.commandFeedbackRange,
       rangeY: this.feedbackRange,
       type: 'insert',
@@ -2052,7 +2054,7 @@ function Visual(options) {
         var pi = b.puzzleInset;
         var pw = b.puzzleWidth;
         var p = b.puzzle;
-        setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.y - r)+'px)');
+        setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.feedbackY - r)+'px)');
         canvas.width = b.ownWidth + l;
         canvas.height = l + p;
         context.lineWidth = l;
