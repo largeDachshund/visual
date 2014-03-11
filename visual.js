@@ -1048,9 +1048,10 @@ function Visual(options) {
       case 's':
         var metrics = Arg.measure(this._type === 'm' ? this.field.textContent : this.field.value);
         this.width = Math.max(6, metrics.width) + 8 + (this.arrow ? this.arrow.width + 1 : 0);
-        this.height = metrics.height + 2;
+        this.height = metrics.height + 3;
         this.field.style.width = this.width + 'px';
         this.field.style.height = this.height + 'px';
+        this.field.style.lineHeight = this.height + 'px';
         if (this.arrow) {
           this.arrowX = this.width - this.arrow.width - 3;
           this.arrowY = (this.height - this.arrow.height) / 2 | 0;
