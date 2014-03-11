@@ -77,6 +77,23 @@ function Visual(options) {
     return {x: x, y: y};
   }
 
+  function getWorldPosition() {
+    var o = this;
+    var x = 0;
+    var y = 0;
+    while (o && !o.isWorkspace) {
+      x += o.x;
+      y += o.y;
+      o = o.parent;
+    }
+    if (o) {
+      var bb = o.el.getBoundingClientRect();
+      x += Math.round(bb.left);
+      y += Math.round(bb.top);
+    }
+    return {x: x, y: y};
+  }
+
   function containsPoint(extent, x, y) {
     return x >= 0 && y >= 0 && x < extent.width && y < extent.height;
   }
@@ -304,6 +321,7 @@ function Visual(options) {
   def(Block.prototype, 'app', {get: getApp});
   def(Block.prototype, 'workspace', {get: getWorkspace});
   def(Block.prototype, 'workspacePosition', {get: getWorkspacePosition});
+  def(Block.prototype, 'worldPosition', {get: getWorldPosition});
 
   def(Block.prototype, 'contextMenu', {get: function() {
     var workspace = this.workspace;
@@ -311,7 +329,7 @@ function Visual(options) {
     var pressY = workspace.pressY;
     return new Menu(
       ['Duplicate', function() {
-        var pos = this.workspacePosition;
+        var pos = this.worldPosition;
         workspace.grab(this.scriptCopy(), pos.x - pressX, pos.y - pressY);
       }],
       Menu.line,
@@ -637,6 +655,7 @@ function Visual(options) {
   def(Label.prototype, 'app', {get: getApp});
   def(Label.prototype, 'workspace', {get: getWorkspace});
   def(Label.prototype, 'workspacePosition', {get: getWorkspacePosition});
+  def(Label.prototype, 'worldPosition', {get: getWorldPosition});
 
   def(Label.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
@@ -662,6 +681,7 @@ function Visual(options) {
   def(Icon.prototype, 'app', {get: getApp});
   def(Icon.prototype, 'workspace', {get: getWorkspace});
   def(Icon.prototype, 'workspacePosition', {get: getWorkspacePosition});
+  def(Icon.prototype, 'worldPosition', {get: getWorldPosition});
 
   def(Icon.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
@@ -843,6 +863,7 @@ function Visual(options) {
   def(Arg.prototype, 'app', {get: getApp});
   def(Arg.prototype, 'workspace', {get: getWorkspace});
   def(Arg.prototype, 'workspacePosition', {get: getWorkspacePosition});
+  def(Arg.prototype, 'worldPosition', {get: getWorldPosition});
 
   def(Arg.prototype, 'contextMenu', {get: function() {return this.parent.contextMenu}});
 
@@ -1028,6 +1049,7 @@ function Visual(options) {
   def(Script.prototype, 'app', {get: getApp});
   def(Script.prototype, 'workspace', {get: getWorkspace});
   def(Script.prototype, 'workspacePosition', {get: getWorkspacePosition});
+  def(Script.prototype, 'worldPosition', {get: getWorldPosition});
 
   def(Script.prototype, 'hasHat', {get: function() {return this.blocks.length && this.blocks[0].isHat}}),
   def(Script.prototype, 'hasFinal', {get: function() {return this.blocks.length && this.blocks[this.blocks.length-1].isFinal}}),
@@ -1320,6 +1342,7 @@ function Visual(options) {
   def(Workspace.prototype, 'app', {get: getApp});
   def(Workspace.prototype, 'workspace', {get: function() {return this}});
   def(Workspace.prototype, 'workspacePosition', {get: function() {return {x: 0, y: 0}}});
+  def(Workspace.prototype, 'worldPosition', {get: getWorldPosition});
 
   def(Workspace.prototype, 'contextMenu', {get: function() {
     return new Menu(
@@ -1457,8 +1480,8 @@ function Visual(options) {
     var workspaces = this.workspaces;
     for (var i = workspaces.length; i--;) {
       var w = workspaces[i];
-      var bb = w.el.getBoundingClientRect();
-      var o = w.objectFromPoint(x - Math.round(bb.left), y - Math.round(bb.top));
+      var pos = w.worldPosition;
+      var o = w.objectFromPoint(x - pos.x, y - pos.y);
       if (o) return o;
     }
     return null;
@@ -1565,7 +1588,8 @@ function Visual(options) {
       var block = this.pressObject.dragObject;
       this.dragWorkspace = block.workspace;
       this.dragPos = block.workspacePosition;
-      this.grab(block.detach(), this.dragPos.x - this.pressX, this.dragPos.y - this.pressY);
+      var pos = block.worldPosition;
+      this.grab(block.detach(), pos.x - this.pressX, pos.y - this.pressY);
       e.preventDefault();
     }
   };
@@ -1629,9 +1653,8 @@ function Visual(options) {
         var y = Math.round(bb.top);
         var w = Math.round(bb.right - x);
         var h = Math.round(bb.bottom - y);
-        if (this.mouseX >= x && this.mouseX < x + w && this.mouseY >= x && this.mouseY < y + h) {
+        if (ws.el === document.body || this.mouseX >= x && this.mouseX < x + w && this.mouseY >= x && this.mouseY < y + h) {
           if (!ws.isPalette) {
-            console.log(this.dragX + this.mouseX, x, this.dragY + this.mouseY, y);
             ws.add(this.dragX + this.mouseX - x, this.dragY + this.mouseY - y, this.dragScript);
           }
           break;
@@ -1703,11 +1726,12 @@ function Visual(options) {
     var length = workspaces.length;
     for (var i = 0; i < length; i++) {
       var w = workspaces[i];
+      var pos = w.worldPosition;
       if (!w.isPalette) {
         var scripts = w.scripts;
         var l = scripts.length;
         for (var j = 0; j < l; j++) {
-          p.call(this, 0, 0, scripts[j]);
+          p.call(this, pos.x, pos.y, scripts[j]);
         }
       }
     }
@@ -1823,7 +1847,7 @@ function Visual(options) {
         var pw = b.puzzleWidth;
         var p = b.puzzle;
         setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.y - r)+'px)');
-        canvas.width = b.width + l;
+        canvas.width = b.ownWidth + l;
         canvas.height = l + p;
         context.lineWidth = l;
         context.lineCap = 'round';
