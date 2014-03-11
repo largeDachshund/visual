@@ -44,6 +44,7 @@ var vis = Visual({
   },
   blocks: {
     if: ['c', 'if %b then %t', 'control'],
+    ifElse: ['c', 'if %b then %t else %t', 'control'],
     repeat: ['c', '@loop repeat %n %t', 'control', 10],
     say: ['c', 'say %s', 'looks', 'Hello!'],
     set: ['c', 'set %m.var to %s', 'data', 'variable', 0],
@@ -70,7 +71,7 @@ w.add(20, 20, new vis.Script()
     .add(new vis.Block('set', ['variable', new vis.Block('lambda')]))
     .add(new vis.Block('play'))]))
   .add(new vis.Block('say'))
-  .add(new vis.Block('if'))
+  .add(new vis.Block('ifElse'))
   .add(new vis.Block('if', [new vis.Block('and', [new vis.Block('touchingColor'), new vis.Block('equal')])]))
   .add(new vis.Block('move', [new vis.Block('add', [new vis.Block('join', [new vis.Block('answer')]), 1])]))
   .add(new vis.Block('wait'))

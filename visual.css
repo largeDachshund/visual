@@ -46,78 +46,7 @@ body.Visual-workspace {
   z-index: 1;
 }
 
-/* Block */
-
-/*.Visual-command {
-  display: block;
-  float: left;
-  clear: both;
-  padding: 3px 5px;
-}
-
-.Visual-puzzled {
-  margin-bottom: -3px;
-  padding-bottom: 6px;
-}
-
-.Visual-reporter {
-  padding: 2px;
-}
-
-.Visual-reporter > .Visual-canvas + .Visual-label,
-.Visual-reporter > .Visual-canvas + .Visual-string-arg,
-.Visual-reporter > .Visual-canvas + .Visual-color-arg {
-  margin-left: 5px;
-}
-.Visual-reporter > .Visual-label:last-child,
-.Visual-reporter > .Visual-string-arg:last-child,
-.Visual-reporter > .Visual-color-arg:last-child {
-  margin-right: 5px;
-}
-.Visual-boolean-reporter > .Visual-canvas + .Visual-label,
-.Visual-boolean-reporter > .Visual-canvas + .Visual-string-arg,
-.Visual-boolean-reporter > .Visual-canvas + .Visual-color-arg {
-  margin-left: 9px;
-}
-.Visual-boolean-reporter > .Visual-label:last-child,
-.Visual-boolean-reporter > .Visual-string-arg:last-child,
-.Visual-boolean-reporter > .Visual-color-arg:last-child {
-  margin-right: 9px;
-}*/
-
 /* Arg */
-
-/*.Visual-part {
-  display: inline-block;
-  position: relative;
-  vertical-align: middle;
-  margin-left: 2px;
-  margin-right: 2px;
-}
-
-.Visual-script > .Visual-part {
-  margin: 0;
-}
-
-.Visual-field-arg {
-  margin-top: 1px;
-  margin-bottom: 1px;
-}
-
-.Visual-script-arg {
-  margin: 3px 0 3px 10px;
-  display: block;
-  position: relative;
-}
-
-.Visual-script-arg:last-child {
-  margin-bottom: 13px;
-}
-
-.Visual-color-arg {
-  margin-top: 2px;
-  margin-bottom: 2px;
-}*/
 
 .Visual-color-field {
   opacity: 0;
@@ -127,10 +56,6 @@ body.Visual-workspace {
 .Visual-field {
   color: #555;
   font: 400 11px Helvetica Neue, Helvetica, Arial, sans-serif;
-  /*padding: .1em 4px .2em 5px;
-  height: 1.5em;
-  box-sizing: border-box;
-  -moz-box-sizing: border-box;*/
   margin: 0;
   padding: 0;
   border: 0;
@@ -150,12 +75,6 @@ body.Visual-workspace {
   color: #fff;
 }
 
-/* .Visual-arrow {
-  position: absolute;
-  right: 4px;
-  top: 6px;
-} */
-
 /* Label */
 
 .Visual-label {
@@ -163,17 +82,6 @@ body.Visual-workspace {
   letter-spacing: .02em;
   color: #fff;
 }
-
-/* Icon */
-
-/*.Visual-icon-loop {
-  position: absolute;
-  width: 14px;
-  height: 11px;
-  bottom: 6px;
-  right: 2px;
-  margin: 0;
-}*/
 
 /* Menu */
 

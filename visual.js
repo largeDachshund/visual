@@ -486,7 +486,7 @@ function Visual(options) {
         }
         if (part.isArg && part._type === 't') {
           lines.push([part], []);
-          lineXs.push([0], []);
+          lineXs.push([0], [0]);
           lineHeights.push(part.height, 0);
           lineX = 0;
           scriptWidth = Math.max(scriptWidth, sp + part.script.width);
