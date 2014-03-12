@@ -17,33 +17,39 @@ html, body {
   background: #e6e8e8;
 }
 .buttons {
-  width: 190px;
-  padding: 10px 0px 8px 10px;
+  width: 202px;
+  padding: 8px 7px 8px 0;
   top: 0;
-  height: 102px;
+  height: 98px;
 }
 .buttons::before {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 10px;
-  right: 10px;
+  left: 8px;
+  right: 11px;
   height: 1px;
   background: #bcbdbe;
   border-bottom: 1px solid #f2f2f2;
 }
 button {
   float: left;
-  width: 85px;
+  box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  width: 99px;
   height: 18px;
-  padding: 0;
-  padding-left: 4px;
+  padding: 0 0 0 8px;
   border: 0;
-  border-left: 7px solid;
   background: 0;
-  margin: 0 10px 2px 0;
+  margin: 0 2px 2px 0;
   outline: none;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+button div {
+  border-left: 7px solid;
+  padding-left: 4px;
 }
 button strong {
   font: 12px/18px Helvetica Neue, Helvetica, Arial, sans-serif;
@@ -52,7 +58,7 @@ button strong {
 button:hover strong {
   color: #fba939;
 }
-button.selected {
+button.selected div {
   background: currentColor;
 }
 button.selected strong {
@@ -60,14 +66,14 @@ button.selected strong {
   font-weight: bold;
 }
 .palette {
-  width: 200px;
-  top: 120px;
+  width: 209px;
+  top: 114px;
   bottom: 0;
 }
 .workspace {
   position: absolute;
   top: 0;
-  left: 201px;
+  left: 210px;
   right: 0;
   bottom: 0;
   background: #e0e0e0;
@@ -767,7 +773,7 @@ function buttonClick() {
 [].forEach.call(document.querySelectorAll('button'), function(b) {
   var cat = vis.getCategory(b.value);
   b.style.color = cat[2];
-  b.innerHTML = '<strong>' + cat[1] + '</strong>';
+  b.innerHTML = '<div><strong>' + cat[1] + '</strong></div>';
   buttons[cat[0]] = b;
   b.addEventListener('click', buttonClick);
 });
