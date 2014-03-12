@@ -1773,7 +1773,7 @@ function Visual(options) {
 
     if (this.pressObject && !this.dragging) {
       if (e.button === 0) {
-        this.shouldDrag = !(this.pressObject.isWorkspace || this.pressObject.isPalette || this.pressObject.isTextArg && document.activeElement === this.pressObject.field);
+        this.shouldDrag = !(this.pressObject.isWorkspace || this.pressObject.isPalette || this.pressObject.isTextArg && e.target === this.pressObject.field);
 
       } else if (e.button === 2) {
         this.hideMenus();
