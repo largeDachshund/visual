@@ -811,6 +811,8 @@ function Visual(options) {
   Arg.prototype.y = 0;
   Arg.prototype.dirty = true;
 
+  Arg.prototype.fieldPadding = 4;
+
   def(Arg.prototype, 'value', {
     get: function() {
       switch (this._type) {
@@ -1047,9 +1049,15 @@ function Visual(options) {
       case 'n':
       case 's':
         var metrics = Arg.measure(this._type === 'm' ? this.field.textContent : this.field.value);
-        this.width = Math.max(6, metrics.width) + 8 + (this.arrow ? this.arrow.width + 1 : 0);
+        var w = Math.max(6, metrics.width) + this.fieldPadding * 2;
+        if (this.arrow) {
+          this.width = w + this.arrow.width + 1;
+          w -= this.fieldPadding - 2;
+        } else {
+          this.width = w;
+        }
         this.height = metrics.height + 3;
-        this.field.style.width = this.width + 'px';
+        this.field.style.width = w + 'px';
         this.field.style.height = this.height + 'px';
         this.field.style.lineHeight = this.height + 'px';
         if (this.arrow) {

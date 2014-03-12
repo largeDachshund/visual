@@ -79,7 +79,9 @@ body.Visual-workspace {
 
 .Visual-text-field,
 .Visual-enum-field {
-  padding: 0 4px;
+  padding: 0 0 0 4px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 .Visual-enum-field {
