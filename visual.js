@@ -939,7 +939,7 @@ function Visual(options) {
   };
 
   Arg.prototype.acceptsDropOf = function(b) {
-    return 'cmt'.indexOf(this.type) === -1 && (this.type !== 'b' || b.isBoolean);
+    return this.type !== 't';
   };
 
   Arg.prototype.copy = function() {
@@ -2048,17 +2048,17 @@ function Visual(options) {
         if (a.isBlock) {
           this.addBlockReporterFeedback(x, y, a);
         }
-        if (a.acceptsDropOf(this.dragScript.blocks[0])) {
-          this.addFeedback({
-            x: ax,
-            y: ay,
-            rangeX: this.feedbackRange,
-            rangeY: this.feedbackRange,
-            type: 'replace',
-            block: block,
-            arg: a
-          });
-        }
+      }
+      if (a.acceptsDropOf(this.dragScript.blocks[0])) {
+        this.addFeedback({
+          x: ax,
+          y: ay,
+          rangeX: this.feedbackRange,
+          rangeY: this.feedbackRange,
+          type: 'replace',
+          block: block,
+          arg: a
+        });
       }
     }
   };
