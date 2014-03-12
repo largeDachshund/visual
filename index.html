@@ -474,7 +474,7 @@ var vis = Visual({
 
 var menusThatAcceptReporters = ['broadcast', 'costume', 'backdrop', 'scene', 'sound', 'spriteOnly', 'spriteOrMouse', 'spriteOrStage', 'touching'];
 vis.Arg.prototype.acceptsDropOf = function(b) {
-  return 'ct'.indexOf(this.type) === -1 && (this.type !== 'b' || b.isBoolean) && (this.type !== 'm' || menusThatAcceptReporters.indexOf(this.menu) !== -1);
+  return this.type !== 't' && (this.type !== 'b' || b.isBoolean) && (this.type !== 'm' || menusThatAcceptReporters.indexOf(this.menu) !== -1);
 };
 
 var app = new vis.App();
