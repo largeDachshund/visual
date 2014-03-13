@@ -1702,6 +1702,10 @@ function Visual(options) {
       this.menus.push(thing);
       document.body.appendChild(thing.el);
     }
+    if (thing.install) {
+      thing.install(this);
+    }
+
     return this;
   };
 
@@ -1709,15 +1713,21 @@ function Visual(options) {
     if (thing.parent !== this) return this;
     thing.parent = null;
 
-    var array =
-      thing.isWorkspace ? this.workspaces :
-      thing.isPalette ? this.palettes :
-      thing.isMenu ? this.menus : [];
-    var i = array.indexOf(thing);
-    array.splice(i, 1);
-
+    if (thing.isPalette) {
+      var i = this.palettes.indexOf(thing);
+      this.palettes.splice(i, 1);
+    }
+    if (thing.isWorkspace) {
+      var i = this.workspaces.indexOf(thing);
+      this.workspaces.splice(i, 1);
+    }
     if (thing.isMenu) {
+      var i = this.menus.indexOf(thing);
+      this.menus.splice(i, 1);
       thing.el.parentNode.removeChild(thing.el);
+    }
+    if (thing.uninstall) {
+      thing.uninstall(this);
     }
 
     return this;
