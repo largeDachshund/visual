@@ -100,6 +100,8 @@ body.Visual-workspace {
 
 .Visual-menu {
   position: fixed;
+  top: 0;
+  left: 0;
   cursor: default;
   background: rgba(255, 255, 255, .95);
   border-radius: 3px;
