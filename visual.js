@@ -1888,29 +1888,13 @@ function Visual(options) {
 
     if (this.feedbackInfo) {
       this.applyDrop(this.feedbackInfo);
-    } else {
-      var workspaces = this.workspaces;
-      var found = false;
-      for (var i = workspaces.length; i--;) {
-        var ws = workspaces[i];
-        var bb = ws.el.getBoundingClientRect();
-        var x = Math.round(bb.left);
-        var y = Math.round(bb.top);
-        var w = Math.round(bb.right - x);
-        var h = Math.round(bb.bottom - y);
-        if (ws.el === document.body || this.mouseX >= x && this.mouseX < x + w && this.mouseY >= y && this.mouseY < y + h) {
-          if (!ws.isPalette) {
-            if (ws.el !== document.body) {
-              x -= ws.scrollX;
-              y -= ws.scrollY;
-            }
-            ws.add(this.dragX + this.mouseX - x, this.dragY + this.mouseY - y, this.dragScript);
-          }
-          found = true;
-          break;
-        }
+    } else if (this.dropWorkspace) {
+      if (!this.dropWorkspace.isPalette) {
+        var pos = this.dropWorkspace.worldPosition;
+        this.dropWorkspace.add(this.dragX + this.mouseX - pos.x, this.dragY + this.mouseY - pos.y, this.dragScript);
       }
-      if (!found && this.dragWorkspace && !this.dragWorkspace.isPalette) {
+    } else {
+      if (this.dragWorkspace && !this.dragWorkspace.isPalette) {
         this.dragWorkspace.add(this.dragPos.x, this.dragPos.y, this.dragScript);
       }
     }
@@ -1918,6 +1902,7 @@ function Visual(options) {
     this.dragPos = null;
     this.dragWorkspace = null;
     this.dragScript = null;
+    this.dropWorkspace = null;
     this.feedbackInfo = null;
   };
 
@@ -1976,16 +1961,26 @@ function Visual(options) {
 
   App.prototype.showFeedback = function(p) {
     var workspaces = this.workspaces;
-    var length = workspaces.length;
-    for (var i = 0; i < length; i++) {
-      var w = workspaces[i];
-      var pos = w.worldPosition;
-      if (!w.isPalette) {
-        var scripts = w.scripts;
+    this.dropWorkspace = null;
+    for (var i = workspaces.length; i--;) {
+      var ws = workspaces[i];
+      var pos = ws.worldPosition;
+      if (ws.el !== document.body) {
+        var x = pos.x + ws.scrollX;
+        var y = pos.y + ws.scrollY;
+        var w = ws.width;
+        var h = ws.height;
+      }
+      if (ws.el === document.body || this.mouseX >= x && this.mouseX < x + w && this.mouseY >= y && this.mouseY < y + h) {
+        this.dropWorkspace = ws;
+        if (ws.isPalette) return;
+
+        var scripts = ws.scripts;
         var l = scripts.length;
         for (var j = 0; j < l; j++) {
           p.call(this, pos.x, pos.y, scripts[j]);
         }
+        return;
       }
     }
   };
