@@ -1533,6 +1533,7 @@ function Visual(options) {
   Workspace.prototype.resize = function() {
     this.width = this.el.offsetWidth;
     this.height = this.el.offsetHeight;
+    this.refill();
   };
 
   Workspace.prototype.refill = function() {
