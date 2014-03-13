@@ -1904,7 +1904,10 @@ function Visual(options) {
       }
     }
 
+    this.dragPos = null;
+    this.dragWorkspace = null;
     this.dragScript = null;
+    this.feedbackInfo = null;
   };
 
   App.prototype.applyDrop = function(info) {
