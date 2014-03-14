@@ -2121,7 +2121,7 @@ function Visual(options) {
     if (isTop && block.isHat || !isTop && this.commandHasHat || this.commandHasFinal || block.isReporter) return;
     this.addFeedback({
       x: x,
-      y: isTop ? y - this.dragScript.height : y,
+      y: isTop && block.parent.parent.isWorkspace ? y - this.dragScript.height : y,
       feedbackY: y,
       rangeX: this.commandFeedbackRange,
       rangeY: this.feedbackRange,
