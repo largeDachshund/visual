@@ -2003,6 +2003,7 @@ function Visual(options) {
     this.dragScript = null;
     this.dropWorkspace = null;
     this.feedbackInfo = null;
+    this.commandScript = null;
   };
 
   App.prototype.applyDrop = function(info) {
@@ -2012,6 +2013,10 @@ function Visual(options) {
         return;
       case 'insert':
         info.script.insert(this.dragScript, info.block);
+        return;
+      case 'wrap':
+        info.script.parent.add(info.script.x - this.commandScript.x, info.script.y - this.commandScript.y, this.dragScript);
+        this.commandScript.value = info.script;
         return;
       case 'replace':
         if (info.arg.isBlock) {
@@ -2051,6 +2056,15 @@ function Visual(options) {
   App.prototype.showCommandFeedback = function() {
     this.commandHasHat = this.dragScript.hasHat;
     this.commandHasFinal = this.dragScript.hasFinal;
+    this.commandScript = null;
+    var args = this.dragScript.blocks[0].args;
+    var length = args.length;
+    for (var i = 0; i < length; i++) {
+      if (args[i]._type === 't') {
+        if (!args[i].script.blocks.length) this.commandScript = args[i];
+        break;
+      }
+    }
     this.showFeedback(this.addScriptCommandFeedback);
   };
 
@@ -2095,6 +2109,17 @@ function Visual(options) {
         rangeX: this.commandFeedbackRange,
         rangeY: this.feedbackRange,
         type: 'append',
+        script: script
+      });
+    }
+    if (this.commandScript && script.parent.isWorkspace) {
+      this.addFeedback({
+        x: x,
+        y: y - this.commandScript.y,
+        feedbackY: y,
+        rangeX: this.commandFeedbackRange,
+        rangeY: this.feedbackRange,
+        type: 'wrap',
         script: script
       });
     }
@@ -2189,17 +2214,44 @@ function Visual(options) {
     var l = this.feedbackLineWidth;
     var r = l/2;
 
+    var pi = b.puzzleInset;
+    var pw = b.puzzleWidth;
+    var p = b.puzzle;
+
     switch (info.type) {
+      case 'wrap':
+        setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.feedbackY - r)+'px)');
+        var w = b.ownWidth - this.commandScript.x + l;
+        var h = info.script.height + l;
+        canvas.width = w;
+        canvas.height = h + p;
+
+        context.lineWidth = l;
+        context.lineCap = 'round';
+        context.lineJoin = 'round';
+        context.strokeStyle = '#fff';
+        context.moveTo(w - r, r);
+        context.lineTo(pi + pw + p * 2 + r, r);
+        context.lineTo(pi + pw + p + r, r + p);
+        context.lineTo(pi + p + r, r + p);
+        context.lineTo(pi + r, r);
+        context.lineTo(r, r);
+        context.lineTo(r, h - r);
+        // context.lineTo(pi + r, h - r)
+        // context.lineTo(pi + p + r, h - r + p);
+        // context.lineTo(pi + pw + p + r, h - r + p);
+        // context.lineTo(pi + pw + p * 2 + r, h - r);
+        context.lineTo(w - r, h - r);
+        context.stroke();
+        break;
       case 'insert':
       case 'append':
-        var pi = b.puzzleInset;
-        var pw = b.puzzleWidth;
-        var p = b.puzzle;
         setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.feedbackY - r)+'px)');
         canvas.width = b.ownWidth + l;
         canvas.height = l + p;
         context.lineWidth = l;
         context.lineCap = 'round';
+        context.lineJoin = 'round';
         context.strokeStyle = '#fff';
         context.moveTo(r, r);
         context.lineTo(pi + r, r);
@@ -2222,6 +2274,7 @@ function Visual(options) {
 
         context.lineWidth = l;
         context.lineCap = 'round';
+        context.lineJoin = 'round';
         context.strokeStyle = '#fff';
         context.stroke();
 
