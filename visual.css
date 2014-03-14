@@ -37,7 +37,7 @@ body.Visual-workspace {
 
 .Visual-feedback {
   position: fixed;
-  z-index: 1;
+  z-index: 10000;
   pointer-events: none;
 }
 
@@ -50,7 +50,7 @@ body.Visual-workspace {
 
 .Visual-script-dragging {
   position: fixed;
-  z-index: 1;
+  z-index: 10001;
 }
 
 /* Arg */
@@ -107,7 +107,7 @@ body.Visual-workspace {
   border-radius: 3px;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .3), 0 3px 8px rgba(0, 0, 0, .3);
   padding: 3px 0;
-  z-index: 10000;
+  z-index: 10002;
 }
 
 .Visual-menu-line {
