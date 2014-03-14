@@ -2289,6 +2289,8 @@ function Visual(options) {
   Menu.prototype.x = 0;
   Menu.prototype.y = 0;
 
+  Menu.prototype.padding = 4;
+
   def(Menu.prototype, 'app', {get: getApp});
 
   Menu.prototype.withAction = function(action, context) {
@@ -2316,13 +2318,19 @@ function Visual(options) {
   };
 
   Menu.prototype.show = function(app) {
-    this.moveTo(app.mouseX, app.mouseY);
-    app.add(this);
+    this.showAt(app.mouseX, app.mouseY, app);
   };
 
   Menu.prototype.showAt = function(x, y, app) {
-    this.moveTo(x, y);
+    var p = this.padding;
     app.add(this);
+    var w = this.el.offsetWidth;
+    var h = this.el.offsetHeight;
+    this.el.style.width = (w+16)+'px';
+    this.el.style.height = h+'px';
+    this.el.style.maxWidth = (window.innerWidth - p * 2)+'px';
+    this.el.style.maxHeight = (window.innerHeight - p * 2)+'px';
+    this.moveTo(Math.max(p, Math.min(window.innerWidth - w - p, x)), Math.max(p, Math.min(window.innerHeight - h - p, y)));
   };
 
   Menu.prototype.mouseUp = function(e) {
