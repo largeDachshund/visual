@@ -21,6 +21,7 @@ function Visual(options) {
       return m ? m(arg) : null;
     };
   }
+  if (options.animationTime == null) options.animationTime = 0.3;
 
 
   function el(tagName, className) {
@@ -57,6 +58,26 @@ function Visual(options) {
     this.x = x;
     this.y = y;
     setTransform(this.el, 'translate('+x+'px,'+y+'px)');
+  }
+
+  function slideTo(x, y, time, callback, context) {
+    if (typeof time === 'function') {
+      context = callback;
+      callback = time;
+      time = options.animationTime;
+    }
+    if (this.x === x && this.y === y) {
+      if (callback) setTimeout(callback.bind(context));
+      return;
+    }
+    setTransition(this.el, 'all '+time+'s ease');
+    this.el.offsetHeight;
+    moveTo.call(this, x, y);
+    var self = this;
+    setTimeout(function() {
+      setTransition(self.el, '');
+      if (callback) callback.call(context)
+    }, time * 1000);
   }
 
   function getWorkspace() {
@@ -127,6 +148,14 @@ function Visual(options) {
     el.style.msTransform =
     el.style.OTransform =
     el.style.transform = transform;
+  }
+
+  function setTransition(el, transition) {
+    el.style.WebkitTransition =
+    el.style.MozTransition =
+    el.style.msTransition =
+    el.style.OTransition =
+    el.style.transition = transition;
   }
 
   function bezel(context, path, thisArg, inset, alpha) {
@@ -352,6 +381,45 @@ function Visual(options) {
     }
   });
 
+  def(Block.prototype, 'state', {get: function() {
+    if (!this.parent) return null;
+    if (this.parent.isBlock) {
+      return {
+        block: this.parent,
+        arg: this.parent.argIndex(this)
+      };
+    }
+    if (this.parent.isScript) {
+      if (this.parent.blocks[0] === this) {
+        if (this.parent.parent && this.parent.parent.isWorkspace) {
+          return {
+            workspace: this.parent.parent,
+            pos: this.parent.workspacePosition
+          };
+        }
+        return {
+          arg: this.parent.parent
+        };
+      }
+      return {script: this.parent};
+    }
+    return null;
+  }});
+
+  Script.prototype.restore = function(state) {
+    if (!state) return this;
+    if (state.block) {
+      state.block.replace(state.block.args[state.arg], this.blocks[0]);
+    } else if (state.script) {
+      state.script.add(this);
+    } else if (state.workspace) {
+      state.workspace.add(state.pos.x, state.pos.y, this);
+    } else if (state.arg) {
+      state.arg.value = this;
+    }
+    return this;
+  };
+
   def(Block.prototype, 'app', {get: getApp});
   def(Block.prototype, 'workspace', {get: getWorkspace});
   def(Block.prototype, 'workspacePosition', {get: getWorkspacePosition});
@@ -386,16 +454,19 @@ function Visual(options) {
       return o.blocks[0];
     }
     return this;
-  }}),
+  }});
 
   Block.prototype.click = function() {};
 
   Block.prototype.acceptsDropOf = function(b) {
     if (!this.parent || !this.parent.isBlock) return;
-    var args = this.parent.args;
-    var i = args.indexOf(this);
+    var i = this.parent.argIndex(this);
     var def = this.parent.inputs[i];
     return def && def.acceptsDropOf(b);
+  };
+
+  Block.prototype.argIndex = function(a) {
+    return this.args.indexOf(a);
   };
 
   Block.prototype.add = function(part) {
@@ -509,6 +580,7 @@ function Visual(options) {
   };
 
   Block.prototype.moveTo = moveTo;
+  Block.prototype.slideTo = slideTo;
   Block.prototype.layout = layout;
 
   Block.prototype.layoutChildren = function() {
@@ -713,6 +785,7 @@ function Visual(options) {
   Label.prototype.layoutChildren = layoutNoChildren;
   Label.prototype.layout = layout;
   Label.prototype.moveTo = moveTo;
+  Label.prototype.slideTo = slideTo;
 
 
   function Icon(name) {
@@ -763,6 +836,7 @@ function Visual(options) {
   Icon.prototype.layoutChildren = layoutNoChildren;
   Icon.prototype.layout = layout;
   Icon.prototype.moveTo = moveTo;
+  Icon.prototype.slideTo = slideTo;
 
   Icon.prototype.pathLoopArrow = function(context) {
     // m 1,11 8,0 2,-2 0,-3 3,0 -4,-5 -4,5 3,0 0,3 -8,0 z
@@ -845,6 +919,8 @@ function Visual(options) {
             this.el.removeChild(this.script.el);
             this.script.parent = null;
             this.script = value;
+            if (value.parent) value.parent.remove(value);
+            value.moveTo(0, 0);
             value.parent = this;
             this.el.appendChild(value.el);
             this.layout();
@@ -1097,6 +1173,7 @@ function Visual(options) {
 
   Arg.prototype.layout = layout;
   Arg.prototype.moveTo = moveTo;
+  Arg.prototype.slideTo = slideTo;
 
 
   function Script() {
@@ -1380,6 +1457,7 @@ function Visual(options) {
 
   Script.prototype.layout = layout;
   Script.prototype.moveTo = moveTo;
+  Script.prototype.slideTo = slideTo;
 
 
   function Workspace(host) {
@@ -1425,12 +1503,16 @@ function Visual(options) {
   }});
 
   Workspace.prototype.add = function(x, y, script) {
+    if (x && script == null && y == null) {
+      script = x;
+      x = null;
+    }
     if (script.parent) script.parent.remove(script);
 
     script.parent = this;
     this.scripts.push(script);
 
-    script.moveTo(x, y);
+    if (x != null) script.moveTo(x, y);
     script.layoutChildren();
     this.layout();
 
@@ -1815,6 +1897,7 @@ function Visual(options) {
       var block = this.pressObject.dragObject;
       this.dragWorkspace = block.workspace;
       this.dragPos = block.workspacePosition;
+      this.dragState = block.state;
       var pos = block.worldPosition;
       this.grab(block.detach(), pos.x - this.pressX, pos.y - this.pressY);
       e.preventDefault();
@@ -1880,6 +1963,11 @@ function Visual(options) {
   App.prototype.drop = function() {
     if (!this.dragging) return;
 
+    var script = this.dragScript;
+    var workspace = this.dragWorkspace;
+    var dragPos = this.dragPos;
+    var state = this.dragState;
+
     document.body.removeChild(this.dragScript.el);
     this.dragScript.parent = null;
     this.dragScript.el.classList.remove('Visual-script-dragging');
@@ -1891,15 +1979,26 @@ function Visual(options) {
     } else if (this.dropWorkspace) {
       if (!this.dropWorkspace.isPalette) {
         var pos = this.dropWorkspace.worldPosition;
-        this.dropWorkspace.add(this.dragX + this.mouseX - pos.x, this.dragY + this.mouseY - pos.y, this.dragScript);
+        this.dropWorkspace.add(this.dragX + this.mouseX - pos.x, this.dragY + this.mouseY - pos.y, script);
       }
     } else {
-      if (this.dragWorkspace && !this.dragWorkspace.isPalette) {
-        this.dragWorkspace.add(this.dragPos.x, this.dragPos.y, this.dragScript);
+      if (workspace && !workspace.isPalette) {
+        this.dragScript.el.classList.add('Visual-script-dragging');
+        this.dragScript.addShadow();
+        document.body.appendChild(this.dragScript.el);
+
+        var pos = workspace.worldPosition;
+        script.slideTo(dragPos.x + pos.x, dragPos.y + pos.y, function() {
+          document.body.removeChild(script.el);
+          script.el.classList.remove('Visual-script-dragging');
+          script.removeShadow();
+          script.restore(state);
+        }, this);
       }
     }
 
     this.dragPos = null;
+    this.dragState = null;
     this.dragWorkspace = null;
     this.dragScript = null;
     this.dropWorkspace = null;
@@ -2253,6 +2352,7 @@ function Visual(options) {
   };
 
   Menu.prototype.moveTo = moveTo;
+  Menu.prototype.slideTo = slideTo;
 
 
   return {
