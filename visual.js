@@ -1320,7 +1320,7 @@ function Visual(options) {
     this.el.appendChild(f);
 
     for (var i = 0; i < length; i++) {
-      blocks[i].layout();
+      blocks[i].layoutChildren();
     }
 
     this.layout();
