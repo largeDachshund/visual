@@ -58,6 +58,7 @@ function Visual(options) {
     this.x = x;
     this.y = y;
     setTransform(this.el, 'translate('+x+'px,'+y+'px)');
+    return this;
   }
 
   function slideTo(x, y, time, callback, context) {
@@ -68,7 +69,7 @@ function Visual(options) {
     }
     if (this.x === x && this.y === y) {
       if (callback) setTimeout(callback.bind(context));
-      return;
+      return this;
     }
     setTransition(this.el, 'all '+time+'s ease');
     this.el.offsetHeight;
@@ -78,6 +79,7 @@ function Visual(options) {
       setTransition(self.el, '');
       if (callback) callback.call(context)
     }, time * 1000);
+    return this;
   }
 
   function getWorkspace() {
@@ -1735,6 +1737,48 @@ function Visual(options) {
   };
 
 
+  function Target(host) {
+    this.el = host;
+    this.resize();
+  }
+
+  Target.prototype.isWorkspace = true;
+  Target.prototype.isTarget = true;
+
+  Target.prototype.scrollX = 0;
+  Target.prototype.scrollY = 0;
+
+  def(Target.prototype, 'app', {get: getApp});
+  def(Target.prototype, 'workspace', {get: function() {return this}});
+  def(Target.prototype, 'workspacePosition', {get: function() {return {x: 0, y: 0}}});
+  def(Target.prototype, 'worldPosition', {get: getWorldPosition});
+
+  Target.prototype.objectFromPoint = function() {
+    return null;
+  };
+
+  Target.prototype.resize = function() {
+    this.width = this.el.offsetWidth;
+    this.height = this.el.offsetHeight;
+  };
+
+  Target.prototype.acceptsDropOf = function(script) {
+    return true;
+  };
+
+  Target.prototype.showFeedback = function(script) {
+    this.el.classList.add('feedback');
+  };
+
+  Target.prototype.hideFeedback = function() {
+    this.el.classList.remove('feedback');
+  };
+
+  Target.prototype.drop = function(script) {
+    return true;
+  };
+
+
   function App() {
     this.workspaces = [];
     this.palettes = [];
@@ -1974,27 +2018,32 @@ function Visual(options) {
     this.dragScript.removeShadow();
     this.feedback.style.display = 'none';
 
+    var handled = false;
     if (this.feedbackInfo) {
       this.applyDrop(this.feedbackInfo);
+      handled = true;
     } else if (this.dropWorkspace) {
-      if (!this.dropWorkspace.isPalette) {
+      handled = true;
+      if (this.dropWorkspace.isTarget) {
+        this.dropWorkspace.hideFeedback();
+        handled = this.dropWorkspace.drop(this.dragScript);
+      } else if (!this.dropWorkspace.isPalette) {
         var pos = this.dropWorkspace.worldPosition;
         this.dropWorkspace.add(this.dragX + this.mouseX - pos.x, this.dragY + this.mouseY - pos.y, script);
       }
-    } else {
-      if (workspace && !workspace.isPalette) {
-        this.dragScript.el.classList.add('Visual-script-dragging');
-        this.dragScript.addShadow();
-        document.body.appendChild(this.dragScript.el);
+    }
+    if (!handled && workspace && !workspace.isPalette) {
+      this.dragScript.el.classList.add('Visual-script-dragging');
+      this.dragScript.addShadow();
+      document.body.appendChild(this.dragScript.el);
 
-        var pos = workspace.worldPosition;
-        script.slideTo(dragPos.x + pos.x, dragPos.y + pos.y, function() {
-          document.body.removeChild(script.el);
-          script.el.classList.remove('Visual-script-dragging');
-          script.removeShadow();
-          script.restore(state);
-        }, this);
-      }
+      var pos = workspace.worldPosition;
+      script.slideTo(dragPos.x + pos.x, dragPos.y + pos.y, function() {
+        document.body.removeChild(script.el);
+        script.el.classList.remove('Visual-script-dragging');
+        script.removeShadow();
+        script.restore(state);
+      }, this);
     }
 
     this.dragPos = null;
@@ -2074,6 +2123,9 @@ function Visual(options) {
 
   App.prototype.showFeedback = function(p) {
     var workspaces = this.workspaces;
+    if (this.dropWorkspace && this.dropWorkspace.isTarget) {
+      this.dropWorkspace.hideFeedback();
+    }
     this.dropWorkspace = null;
     for (var i = workspaces.length; i--;) {
       var ws = workspaces[i];
@@ -2085,8 +2137,12 @@ function Visual(options) {
         var h = ws.height;
       }
       if (ws.el === document.body || this.mouseX >= x && this.mouseX < x + w && this.mouseY >= y && this.mouseY < y + h) {
+        if (ws.isTarget) {
+          if (!ws.acceptsDropOf(this.dragScript)) continue;
+          ws.showFeedback(this.dragScript);
+        }
         this.dropWorkspace = ws;
-        if (ws.isPalette) return;
+        if (ws.isPalette || ws.isTarget) return;
 
         var scripts = ws.scripts;
         var l = scripts.length;
@@ -2428,6 +2484,7 @@ function Visual(options) {
     Script: Script,
     Workspace: Workspace,
     Palette: Palette,
+    Target: Target,
     App: App,
     Menu: Menu
   };
