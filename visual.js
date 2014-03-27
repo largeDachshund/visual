@@ -194,13 +194,13 @@ function Visual(options) {
 
     context.shadowOffsetX = 10000 + s * -1;
     context.shadowOffsetY = 10000 + s * -1;
-    context.shadowBlur = 1;
+    context.shadowBlur = 1.5;
     context.shadowColor = 'rgba(0, 0, 0, .4)';
     context.fill();
 
     context.shadowOffsetX = 10000 + s * 1;
     context.shadowOffsetY = 10000 + s * 1;
-    context.shadowBlur = 1;
+    context.shadowBlur = 1.5;
     context.shadowColor = 'rgba(255, 255, 255, .3)';
     context.fill();
 
