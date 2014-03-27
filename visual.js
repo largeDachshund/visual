@@ -98,6 +98,15 @@ function Visual(options) {
     return o;
   }
 
+  function getTopScript() {
+    var o = this;
+    while (o.parent) {
+      if (o.parent.isWorkspace) return o;
+      o = o.parent;
+    }
+    return null;
+  }
+
   function getWorkspacePosition() {
     var o = this;
     var x = 0;
@@ -192,7 +201,7 @@ function Visual(options) {
     context.shadowOffsetX = 10000 + s * 1;
     context.shadowOffsetY = 10000 + s * 1;
     context.shadowBlur = 1;
-    context.shadowColor = 'rgba(255, 255, 255, .4)';
+    context.shadowColor = 'rgba(255, 255, 255, .3)';
     context.fill();
 
     context.restore();
@@ -255,10 +264,10 @@ function Visual(options) {
   Block.prototype.parent = null;
   Block.prototype.dirty = true;
 
-  Block.prototype.radius = 4;
+  Block.prototype.radius = 3;
   Block.prototype.puzzle = 3;
-  Block.prototype.puzzleWidth = 9;
-  Block.prototype.puzzleInset = 14;
+  Block.prototype.puzzleWidth = 8;
+  Block.prototype.puzzleInset = 13;
   Block.prototype.hatHeight = 12;
   Block.prototype.hatWidth = 80;
 
@@ -300,11 +309,12 @@ function Visual(options) {
       var w = this.ownWidth;
       var h = this.ownHeight - p;
       var hh = this.hatHeight;
+      var hp = this.hatPaddingTop;
       var hw = this.hatWidth;
       context.moveTo(0, hh);
-      context.quadraticCurveTo(.125*hw, .1*hh, hw/2, 0);
-      context.quadraticCurveTo(.875*hw, .1*hh, hw, hh);
-      context.arc(w - r, hh + r, r, PI32, 0, false);
+      context.quadraticCurveTo(.125*hw, .15*hh, hw/2, 0);
+      context.quadraticCurveTo(.875*hw, .15*hh, hw, hh - hp);
+      context.arc(w - r, hh - hp + r, r, PI32, 0, false);
       this.pathCommandShape(context, true, false);
     }
   };
@@ -318,21 +328,24 @@ function Visual(options) {
     var h = this.ownHeight - bottom * p;
     if (top) {
       context.moveTo(0, r);
-      context.arc(r, r, r, PI, PI32, false);
+      context.lineTo(r, 0);
       context.lineTo(pi, 0);
       context.lineTo(pi + p, p);
       context.lineTo(pi + pw + p, p);
       context.lineTo(pi + pw + p * 2, 0);
-      context.arc(w - r, r, r, PI32, 0, false);
+      context.lineTo(w - r, 0);
+      context.lineTo(w, r);
     }
-    context.arc(w - r, h - r, r, 0, PI12, false);
+    context.lineTo(w, h - r);
+    context.lineTo(w - r, h);
     if (bottom) {
       context.lineTo(pi + pw + p * 2, h);
       context.lineTo(pi + pw + p, h + p);
       context.lineTo(pi + p, h + p);
       context.lineTo(pi, h);
     }
-    context.arc(r, h - r, r, PI12, PI, false);
+    context.lineTo(r, h);
+    context.lineTo(0, h - r);
   };
 
   def(Block.prototype, 'spec', {
@@ -347,13 +360,9 @@ function Visual(options) {
       this.parts = [];
       this.hasScript = false;
 
-      var parts = value.split(/(?:@(\w+)|%(\w+(?:\.\w+)?))/g);
+      var parts = value.split(/(?:@(\w+)|%(\w+(?:\.\w+)?)|([^\s%@]+|[%@]))/g);
       var i = 0;
       for (;;) {
-        var text = parts[i].trim();
-        if (text) {
-          this.add(new Label(text));
-        }
         i++;
         if (i >= parts.length) break;
         if (parts[i]) {
@@ -368,6 +377,11 @@ function Visual(options) {
           if (arg._type === 't') {
             this.hasScript = true;
           }
+        }
+        i++;
+        var text = parts[i];
+        if (text && (text = text.trim())) {
+          this.add(new Label(text));
         }
         i++;
       }
@@ -426,6 +440,7 @@ function Visual(options) {
   def(Block.prototype, 'workspace', {get: getWorkspace});
   def(Block.prototype, 'workspacePosition', {get: getWorkspacePosition});
   def(Block.prototype, 'worldPosition', {get: getWorldPosition});
+  def(Block.prototype, 'topScript', {get: getTopScript});
 
   def(Block.prototype, 'contextMenu', {get: function() {
     if (this.workspace.isPalette) {
@@ -595,8 +610,12 @@ function Visual(options) {
     }
   };
 
-  Block.prototype.paddingX = 5;
-  Block.prototype.paddingY = 3;
+  Block.prototype.paddingX = 6;
+  Block.prototype.paddingTop = 4;
+  Block.prototype.hatPaddingTop = 3;
+  Block.prototype.paddingBottom = 2;
+  Block.prototype.reporterPaddingX = 5;
+  Block.prototype.reporterPaddingY = 2;
   Block.prototype.partPadding = 4;
   Block.prototype.linePadding = 3;
   Block.prototype.scriptPadding = 15;
@@ -604,8 +623,8 @@ function Visual(options) {
   Block.prototype.minDistance = function(part) {
     if (this.isBoolean) {
       return (
-        part.isBlock && part.type === 'r' && !part.hasScript ? this.paddingX + part.height/4 | 0 :
-        part.type !== 'b' ? this.paddingX + part.height/2 | 0 :
+        part.isBlock && part.type === 'r' && !part.hasScript ? this.reporterPaddingX + part.height/4 | 0 :
+        part.type !== 'b' ? this.reporterPaddingX + part.height/2 | 0 :
         0);
     }
     if (this.isReporter) {
@@ -617,8 +636,9 @@ function Visual(options) {
   };
 
   Block.prototype.layoutSelf = function() {
-    var xp = this.paddingX;
-    var yp = this.paddingY;
+    var xp = this.isReporter ? this.reporterPaddingX : this.paddingX;
+    var tp = this.isReporter ? this.reporterPaddingY : this.paddingTop;
+    var bp = this.isReporter ? this.reporterPaddingY : this.paddingBottom;
     var pp = this.partPadding;
     var lp = this.linePadding;
     var sp = this.scriptPadding;
@@ -668,7 +688,7 @@ function Visual(options) {
     }
     width = Math.max(width + xp * 2, this.type === 'h' || this.hasScript ? 83 : command ? 39 : 0);
 
-    var y = this.isHat ? this.hatHeight + yp : yp;
+    var y = this.isHat ? this.hatHeight : tp;
     length = lines.length;
     for (i = 0; i < length; i++) {
       var line = lines[i];
@@ -684,7 +704,7 @@ function Visual(options) {
       }
       y += lh + lp;
     }
-    var height = y - lp + yp;
+    var height = y - lp + bp;
 
     if (loop) {
       loop.moveTo(width - loop.width - 2, height - loop.height - 3);
@@ -703,6 +723,7 @@ function Visual(options) {
     context.closePath();
     var w = this.ownWidth;
     var r = this.radius;
+    var ri = r - 1;
     var p = this.puzzle;
     var pi = this.puzzleInset;
     var pw = this.puzzleWidth;
@@ -711,11 +732,14 @@ function Visual(options) {
         var x = a.x;
         var y = a.y;
         var h = a.height;
-        context.moveTo(x + r, y);
-        context.arc(x + r, y + r, r, PI32, PI, true);
-        context.arc(x + r, y + h - r, r, PI, PI12, true);
-        context.arc(w - r, y + h + r, r, PI32, 0, false);
-        context.arc(w - r, y - r, r, 0, PI12, false);
+        context.moveTo(x + ri, y);
+        context.lineTo(x, y + ri);
+        context.lineTo(x, y + h - ri);
+        context.lineTo(x + ri, y + h);
+        context.lineTo(w - r, y + h);
+        context.lineTo(w, y + h + r);
+        context.lineTo(w, y - r);
+        context.lineTo(w - r, y);
         context.lineTo(x + pi + pw + p * 2, y);
         context.lineTo(x + pi + pw + p, y + p);
         context.lineTo(x + pi + p, y + p);
@@ -1062,11 +1086,11 @@ function Visual(options) {
     var h = this.height;
     var r = Math.min(w, h) / 2;
 
-    context.moveTo(0, r);
-    context.arc(r, r, r, PI, PI32, false);
-    context.arc(w - r, r, r, PI32, 0, false);
-    context.arc(w - r, h - r, r, 0, PI12, false);
-    context.arc(r, h - r, r, PI12, PI, false);
+    context.moveTo(0, r + .5);
+    context.arc(r, r + .5, r, PI, PI32, false);
+    context.arc(w - r, r + .5, r, PI32, 0, false);
+    context.arc(w - r, h - r - .5, r, 0, PI12, false);
+    context.arc(r, h - r - .5, r, PI12, PI, false);
   };
 
   Arg.prototype.pathRectShape = function(context) {
@@ -1115,7 +1139,7 @@ function Visual(options) {
       var c = can.getContext('2d');
       c.fillStyle = this.parent.color;
       c.fillRect(0, 0, 1, 1);
-      c.fillStyle = 'rgba(0, 0, 0, .2)';
+      c.fillStyle = 'rgba(0, 0, 0, .1)';
       c.fillRect(0, 0, 1, 1);
       var d = c.getImageData(0, 0, 1, 1).data;
       var s = (d[0] * 0x10000 + d[1] * 0x100 + d[2]).toString(16);
@@ -1137,7 +1161,7 @@ function Visual(options) {
         this.height = metrics.height + 3;
         this.field.style.width = w + 'px';
         this.field.style.height = this.height + 'px';
-        this.field.style.lineHeight = this.height + 'px';
+        // this.field.style.lineHeight = this.height + 'px';
         if (this.arrow) {
           this.arrowX = this.width - this.arrow.width - 3;
           this.arrowY = (this.height - this.arrow.height) / 2 | 0;
@@ -1199,6 +1223,7 @@ function Visual(options) {
   def(Script.prototype, 'workspace', {get: getWorkspace});
   def(Script.prototype, 'workspacePosition', {get: getWorkspacePosition});
   def(Script.prototype, 'worldPosition', {get: getWorldPosition});
+  def(Script.prototype, 'topScript', {get: getTopScript});
 
   def(Script.prototype, 'hasHat', {get: function() {return this.blocks.length && this.blocks[0].isHat}}),
   def(Script.prototype, 'hasFinal', {get: function() {return this.blocks.length && this.blocks[this.blocks.length-1].isFinal}}),
@@ -1446,15 +1471,17 @@ function Visual(options) {
     var length = blocks.length;
     var y = 0;
     var w = 0;
-    for (var i = 0; i < length; i++) {
+    for (var i = 0; i < length;) {
       var b = blocks[i];
       b.moveTo(0, y);
       w = Math.max(w, b.width);
+      i++;
       y += b.height;
     }
 
-    this.width = w;
+    this.width = this.ownWidth = w;
     this.height = y;
+    this.ownHeight = this.height + (b ? b.ownHeight - b.height : 0);
   };
 
   Script.prototype.layout = layout;
@@ -1488,7 +1515,8 @@ function Visual(options) {
   Workspace.prototype.scrollX = 0;
   Workspace.prototype.scrollY = 0;
 
-  Workspace.prototype.padding = 20;
+  Workspace.prototype.paddingX = 20;
+  Workspace.prototype.paddingY = 20;
   Workspace.prototype.extraSpace = 100;
   Workspace.prototype.spacing = 20;
 
@@ -1543,7 +1571,8 @@ function Visual(options) {
       s.parent = null;
     }
     this.scripts = [];
-    this.contentWidth = this.contentHeight = this.padding + this.extraSpace;
+    this.contentWidth = this.paddingX + this.extraSpace;
+    this.contentHeight = this.paddingY + this.extraSpace;
     this.refill();
     return this;
   };
@@ -1572,9 +1601,10 @@ function Visual(options) {
   };
 
   Workspace.prototype.layout = function() {
-    var p = this.padding;
-    var x = p;
-    var y = p;
+    var px = this.paddingX;
+    var py = this.paddingY;
+    var x = px;
+    var y = py;
     var width = 0;
     var height = 0;
 
@@ -1588,13 +1618,13 @@ function Visual(options) {
       }
       x = Math.min(x, script.x);
       y = Math.min(y, script.y);
-      width = Math.max(width, script.x - x + script.width);
-      height = Math.max(height, script.y - y + script.height);
+      width = Math.max(width, script.x - x + script.ownWidth);
+      height = Math.max(height, script.y - y + script.ownHeight);
     }
 
-    if (x < p || y < p) {
-      x -= p;
-      y -= p;
+    if (x < px || y < py) {
+      x -= px;
+      y -= py;
       this.scripts.forEach(function(script) {
         script.moveTo(script.x - x, script.y - y);
       });
@@ -1633,11 +1663,11 @@ function Visual(options) {
     scripts.sort(function(a, b) {
       return a.y - b.y;
     });
-    var y = this.padding;
+    var y = this.paddingY;
     var length = scripts.length;
     for (var i = 0; i < length; i++) {
       var s = scripts[i];
-      s.moveTo(this.padding, y);
+      s.moveTo(this.paddingX, y);
       y += s.height + this.spacing;
     }
     this.layout();
@@ -1651,7 +1681,7 @@ function Visual(options) {
   Palette.space = function(size) {
     return {
       isSpace: true,
-      size: size == null ? 24 : size
+      size: size == null ? Palette.prototype.spaceSize : size
     };
   };
 
@@ -1659,9 +1689,11 @@ function Visual(options) {
   Palette.prototype.constructor = Palette;
 
   Palette.prototype.isPalette = true;
-  Palette.prototype.padding = 10;
+  Palette.prototype.paddingX = 10;
+  Palette.prototype.paddingY = 10;
   Palette.prototype.extraSpace = 10;
   Palette.prototype.spacing = 7;
+  Palette.prototype.spaceSize = 24;
 
   Palette.prototype.cleanUp = undefined;
 
@@ -1674,12 +1706,12 @@ function Visual(options) {
     if (script.isSpace) {
       this.contentHeight += script.size - (this.scripts.length > 1 ? this.spacing : 0);
     } else {
-      var y = this.scripts.length > 1 ? this.contentHeight - this.extraSpace + this.spacing : this.padding;
-      script.moveTo(this.padding, y);
+      var y = this.scripts.length > 1 ? this.contentHeight - this.extraSpace + this.spacing : this.paddingY;
+      script.moveTo(this.paddingX, y);
 
       script.layoutChildren();
-      this.contentWidth = Math.max(this.contentWidth, this.padding + script.width + this.extraSpace)
-      this.contentHeight = y + script.height + this.extraSpace;
+      this.contentWidth = Math.max(this.contentWidth, this.paddingX + script.width + this.extraSpace)
+      this.contentHeight = y + script.ownHeight + this.extraSpace;
       this.el.appendChild(script.el);
     }
 
@@ -1712,11 +1744,12 @@ function Visual(options) {
   };
 
   Palette.prototype.layout = function() {
-    var pd = this.padding;
+    var px = this.paddingX;
+    var py = this.paddingY;
     var sp = this.spacing;
     var es = this.extraSpace;
 
-    var y = pd;
+    var y = py;
     var w = 0;
     var scripts = this.scripts;
     var length = scripts.length;
@@ -1725,14 +1758,14 @@ function Visual(options) {
       if (s.isSpace) {
         y += s.size - (i === 0 ? 0 : sp);
       } else {
-        s.moveTo(pd, y);
-        w = Math.max(w, s.width);
-        y += s.height + sp;
+        s.moveTo(px, y);
+        w = Math.max(w, s.ownWidth);
+        y += s.ownHeight + sp;
       }
     }
 
     this.contentHeight = y - sp + es;
-    this.contentWidth = pd + w + es;
+    this.contentWidth = px + w + es;
     this.refill()
   };
 
@@ -1776,6 +1809,10 @@ function Visual(options) {
 
   Target.prototype.drop = function(script) {
     return true;
+  };
+
+  Target.prototype.objectFromPoint = function(x, y) {
+    return containsPoint(this, x, y) ? this : null;
   };
 
 
