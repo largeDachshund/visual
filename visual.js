@@ -268,7 +268,7 @@ function Visual(options) {
   Block.prototype.puzzle = 3;
   Block.prototype.puzzleWidth = 8;
   Block.prototype.puzzleInset = 13;
-  Block.prototype.hatHeight = 12;
+  Block.prototype.hatHeight = 13;
   Block.prototype.hatWidth = 80;
 
   Block.prototype.pathBlockType = {
