@@ -1241,7 +1241,7 @@ function Visual(options) {
   Script.prototype.shadow = function(blur, color) {
     var canvas = el('canvas', 'Visual-absolute');
     canvas.width = this.width + blur * 2;
-    canvas.height = this.height + blur * 2;
+    canvas.height = this.ownHeight + blur * 2;
 
     var context = canvas.getContext('2d');
     context.fillStyle = '#000';
