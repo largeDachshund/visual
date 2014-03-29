@@ -818,6 +818,7 @@ function Visual(options) {
     this.el = el('canvas', 'Visual-absolute');
     this.context = this.el.getContext('2d');
     this.name = name;
+    this.fn = this.icons[name] || this.icons.empty;
   }
 
   Icon.prototype.isIcon = true;
@@ -834,12 +835,10 @@ function Visual(options) {
 
   def(Icon.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
-  Icon.prototype.layoutSelf = function() {
-    var canvas = this.el;
-    var context = this.context;
-    if (this.name === 'loop') {
-      canvas.width = 14;
-      canvas.height = 11;
+  Icon.prototype.icons = {
+    loop: function(context) {
+      context.canvas.width = 14;
+      context.canvas.height = 11;
 
       this.pathLoopArrow(context);
       context.fillStyle = 'rgba(0, 0, 0, .3)';
@@ -849,14 +848,23 @@ function Visual(options) {
       this.pathLoopArrow(context);
       context.fillStyle = 'rgba(255, 255, 255, .9)';
       context.fill();
-
-    } else {
-      canvas.width = 0;
-      canvas.height = 0;
+    },
+    empty: function(context) {
+      context.canvas.width = 0;
+      context.canvas.height = 0;
     }
+  };
 
-    this.width = canvas.width;
-    this.height = canvas.height;
+  Icon.prototype.redraw = function() {
+    this.el.width = this.width;
+    this.fn(this.context);
+  };
+
+  Icon.prototype.layoutSelf = function() {
+    this.fn(this.context);
+
+    this.width = this.el.width;
+    this.height = this.el.height;
   };
 
   Icon.prototype.layoutChildren = layoutNoChildren;
