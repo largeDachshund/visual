@@ -1233,10 +1233,11 @@ function Visual(options) {
   def(Script.prototype, 'worldPosition', {get: getWorldPosition});
   def(Script.prototype, 'topScript', {get: getTopScript});
 
-  def(Script.prototype, 'hasHat', {get: function() {return this.blocks.length && this.blocks[0].isHat}}),
-  def(Script.prototype, 'hasFinal', {get: function() {return this.blocks.length && this.blocks[this.blocks.length-1].isFinal}}),
+  def(Script.prototype, 'hasHat', {get: function() {return this.blocks.length && this.blocks[0].isHat}});
+  def(Script.prototype, 'hasFinal', {get: function() {return this.blocks.length && this.blocks[this.blocks.length-1].isFinal}});
 
-  def(Script.prototype, 'isReporter', {get: function() {return this.blocks.length && this.blocks[0].isReporter}}),
+  def(Script.prototype, 'isReporter', {get: function() {return this.blocks.length && this.blocks[0].isReporter}});
+  def(Script.prototype, 'isEmpty', {get: function() {return !this.blocks.length}});
 
   Script.prototype.shadow = function(blur, color) {
     var canvas = el('canvas', 'Visual-absolute');
