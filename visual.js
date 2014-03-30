@@ -586,6 +586,10 @@ function Visual(options) {
     return this.parent.copyAt(this);
   };
 
+  Block.prototype.toJSON = function() {
+    return [this.name].concat(this.args);
+  };
+
   Block.prototype.objectFromPoint = function(x, y) {
     var args = this.args;
     for (var i = args.length; i--;) {
@@ -1057,6 +1061,10 @@ function Visual(options) {
     return new Arg([this.type, this.menu], value);
   };
 
+  Arg.prototype.toJSON = function() {
+    return this._type === 't' ? this.script.toJSON() : this.value;
+  };
+
   Arg.prototype.objectFromPoint = function(x, y) {
     switch (this._type) {
       case 'b': return null;
@@ -1452,6 +1460,10 @@ function Visual(options) {
     if (i === -1) return script;
     script.addScript({blocks: this.blocks.slice(i).map(function(b) {return b.copy()})});
     return script;
+  };
+
+  Script.prototype.toJSON = function() {
+    return this.parent && this.parent.isWorkspace ? [this.x, this.y, this.blocks] : this.blocks;
   };
 
   Script.prototype.objectFromPoint = function(x, y) {
