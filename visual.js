@@ -2294,7 +2294,7 @@ function Visual(options) {
         script: script
       });
     }
-    if (this.commandScript && script.parent.isWorkspace) {
+    if (this.commandScript && script.parent.isWorkspace && !script.hasHat) {
       this.addFeedback({
         x: x,
         y: y - this.commandScript.y,
