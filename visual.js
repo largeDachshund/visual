@@ -860,7 +860,6 @@ function Visual(options) {
   };
 
   Icon.prototype.redraw = function() {
-    this.el.width = this.width;
     this.fn(this.context);
   };
 
@@ -1221,6 +1220,9 @@ function Visual(options) {
   function Script() {
     this.el = el('Visual-absolute Visual-script');
 
+    this.effectFns = [];
+    this.effects = [];
+
     this.blocks = [];
     this.x = 0;
     this.y = 0;
@@ -1247,13 +1249,14 @@ function Visual(options) {
   def(Script.prototype, 'isReporter', {get: function() {return this.blocks.length && this.blocks[0].isReporter}});
   def(Script.prototype, 'isEmpty', {get: function() {return !this.blocks.length}});
 
-  Script.prototype.shadow = function(blur, color) {
+  Script.prototype.shadow = function(offsetX, offsetY, blur, color) {
     var canvas = el('canvas', 'Visual-absolute');
+    setTransform(canvas, 'translate('+(offsetX - blur)+'px, '+(offsetY - blur)+'px)');
     canvas.width = this.width + blur * 2;
     canvas.height = this.ownHeight + blur * 2;
 
     var context = canvas.getContext('2d');
-    context.fillStyle = '#000';
+    context.save();
     context.shadowColor = color;
     context.shadowBlur = blur;
     context.shadowOffsetX = 10000 + blur;
@@ -1261,26 +1264,76 @@ function Visual(options) {
     context.translate(-10000, -10000);
     this.pathShadowOn(context);
     context.fill();
+    context.restore();
 
     return canvas;
   };
 
   Script.prototype.addShadow = function(offsetX, offsetY, blur, color) {
-    this.removeShadow();
-
-    var canvas = this.shadow(blur, color);
-    setTransform(canvas, 'translate('+(offsetX - blur)+'px, '+(offsetY - blur)+'px)');
-    this._shadow = canvas;
-    this.el.insertBefore(canvas, this.el.firstChild);
-
+    if (!this._shadow) {
+      this.addEffect(this._shadow = this.shadow.bind(this, offsetX, offsetY, blur, color));
+    }
     return this;
   };
 
   Script.prototype.removeShadow = function() {
-    if (this._shadow) {
-      this.el.removeChild(this._shadow);
-      this._shadow = null;
+    this.removeEffect(this._shadow);
+    this._shadow = null;
+    return this;
+  };
+
+  Script.prototype.addEffect = function(fn) {
+    var effect = fn.call(this);
+    this.el.insertBefore(effect, this.el.firstChild);
+    this.effectFns.push(fn);
+    this.effects.push(effect);
+    return this;
+  };
+
+  Script.prototype.removeEffect = function(fn) {
+    var i = this.effectFns.indexOf(fn);
+    if (i !== -1) {
+      this.el.removeChild(this.effects[i]);
+      this.effectFns.splice(i, 1);
+      this.effects.splice(i, 1);
     }
+    return this;
+  };
+
+  Script.prototype.outline = function(size, color) {
+    var canvas = el('canvas', 'Visual-absolute');
+    setTransform(canvas, 'translate('+(-size)+'px, '+(-size)+'px)');
+    canvas.width = this.width + size * 2;
+    canvas.height = this.ownHeight + size * 2;
+
+    var context = canvas.getContext('2d');
+    context.save();
+    context.shadowColor = color;
+    context.shadowBlur = 0;
+    context.translate(-10000, -10000);
+    this.pathShadowOn(context);
+    for (var x = 0; x <= 2; x += 2) {
+      for (var y = 0; y <= 2; y += 2) {
+        context.shadowOffsetX = 10000 + x * size;
+        context.shadowOffsetY = 10000 + y * size;
+        context.fill();
+      }
+    }
+    context.restore();
+
+    return canvas;
+  };
+
+  Script.prototype.addOutline = function(size, color) {
+    if (!this._outline) {
+      this.addEffect(this._outline = this.outline.bind(this, size, color));
+    }
+    return this;
+  };
+
+  Script.prototype.removeOutline = function() {
+    this.removeEffect(this._outline);
+    this._outline = null;
     return this;
   };
 
@@ -1503,6 +1556,12 @@ function Visual(options) {
     this.width = this.ownWidth = w;
     this.height = y;
     this.ownHeight = this.height + (b ? b.ownHeight - b.height : 0);
+
+    var l = this.effects.length;
+    for (var i = 0; i < l; i++) {
+      var effect = this.effects[i];
+      this.el.replaceChild(this.effects[i] = this.effectFns[i].call(this), effect);
+    }
   };
 
   Script.prototype.layout = layout;
