@@ -621,7 +621,7 @@ function Visual(options) {
   Block.prototype.reporterPaddingX = 5;
   Block.prototype.reporterPaddingY = 2;
   Block.prototype.partPadding = 4;
-  Block.prototype.linePadding = 3;
+  Block.prototype.lineSpacing = 2;
   Block.prototype.scriptPadding = 15;
 
   Block.prototype.minDistance = function(part) {
@@ -644,7 +644,7 @@ function Visual(options) {
     var tp = this.isReporter ? this.reporterPaddingY : this.paddingTop;
     var bp = this.isReporter ? this.reporterPaddingY : this.paddingBottom;
     var pp = this.partPadding;
-    var lp = this.linePadding;
+    var ls = this.lineSpacing;
     var sp = this.scriptPadding;
     var cmw = this.puzzle * 2 + this.puzzleInset + this.puzzleWidth;
     var command = this.isCommand;
@@ -688,7 +688,7 @@ function Visual(options) {
     }
 
     if (!lines[line].length) {
-      lineHeights[line] = 10;
+      lineHeights[line] = 12;
     }
     width = Math.max(width + xp * 2, this.type === 'h' || this.hasScript ? 83 : command ? 39 : 0);
 
@@ -706,9 +706,9 @@ function Visual(options) {
           p.moveTo(xp + xs[j], y + ((lh - p.height) / 2 | 0));
         }
       }
-      y += lh + lp;
+      y += lh + ls;
     }
-    var height = y - lp + bp;
+    var height = y - ls + bp;
 
     if (loop) {
       loop.moveTo(width - loop.width - 2, height - loop.height - 3);
@@ -1185,11 +1185,11 @@ function Visual(options) {
         break;
       case 't':
         this.width = 0;
-        this.height = Math.max(10, this.script.height);
+        this.height = Math.max(9, this.script.height);
         break;
       case 'b':
         this.width = 27;
-        this.height = 13;
+        this.height = 15;
         break;
       default:
         this.width = 13;
