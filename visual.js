@@ -245,12 +245,6 @@ function Visual(options) {
 
     this.name = info[2];
     this.type = info[0];
-    this.isHat = this.type === 'h';
-    this.hasPuzzle = this.type === 'c' || this.type === 'h';
-    this.isFinal = this.type === 'f';
-    this.isCommand = this.type === 'c' || this.type === 'f';
-    this.isReporter = this.type === 'r' || this.type === 'b';
-    this.isBoolean = this.type === 'b';
     this.spec = info[1];
     this.color = category[2];
   }
@@ -394,6 +388,21 @@ function Visual(options) {
       this._color = value;
 
       if (this.parent) this.draw();
+    }
+  });
+
+  def(Block.prototype, 'type', {
+    get: function() {return this._type},
+    set: function(value) {
+      this._type = value;
+      this.isHat = value === 'h';
+      this.hasPuzzle = value === 'c' || value === 'h';
+      this.isFinal = value === 'f';
+      this.isCommand = value === 'c' || value === 'f';
+      this.isReporter = value === 'r' || value === 'b';
+      this.isBoolean = value === 'b';
+
+      this.layout();
     }
   });
 
@@ -627,8 +636,8 @@ function Visual(options) {
   Block.prototype.minDistance = function(part) {
     if (this.isBoolean) {
       return (
-        part.isBlock && part.type === 'r' && !part.hasScript ? this.reporterPaddingX + part.height/4 | 0 :
-        part.type !== 'b' ? this.reporterPaddingX + part.height/2 | 0 :
+        part.isBlock && part._type === 'r' && !part.hasScript ? this.reporterPaddingX + part.height/4 | 0 :
+        part._type !== 'b' ? this.reporterPaddingX + part.height/2 | 0 :
         0);
     }
     if (this.isReporter) {
@@ -690,7 +699,7 @@ function Visual(options) {
     if (!lines[line].length) {
       lineHeights[line] = 12;
     }
-    width = Math.max(width + xp * 2, this.type === 'h' || this.hasScript ? 83 : command ? 39 : 0);
+    width = Math.max(width + xp * 2, this.isHat || this.hasScript ? 83 : command ? 39 : 0);
 
     var y = this.isHat ? this.hatHeight : tp;
     length = lines.length;
@@ -723,7 +732,7 @@ function Visual(options) {
   };
 
   Block.prototype.pathBlock = function(context) {
-    this.pathBlockType[this.type].call(this, context);
+    this.pathBlockType[this._type].call(this, context);
     context.closePath();
     var w = this.ownWidth;
     var r = this.radius;
