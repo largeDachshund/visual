@@ -2706,13 +2706,13 @@ function Visual(options) {
   };
 
   Menu.prototype.commit = function(index) {
+    this.hide();
     var item = this.items[index];
     if (typeof item[1] === 'function') {
       item[1].call(this.context);
     } else if (typeof this.action === 'function') {
       this.action.call(this.context, item.length > 1 ? item[1] : item[0], item);
     }
-    this.hide();
   };
 
   Menu.prototype.hide = function() {
