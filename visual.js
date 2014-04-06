@@ -20,12 +20,14 @@ function Visual(options) {
       var m = options.menus[arg.menu];
       return m ? m(arg) : null;
     };
+    if (!options.menus) options.menus = {};
   }
   if (!options.getText) {
     options.getText = function(key) {
       var translation = options.strings[key];
       return translation == null ? key : translation;
     };
+    if (!options.strings) options.strings = {};
   }
   if (options.animationTime == null) options.animationTime = 0.3;
 
@@ -1768,14 +1770,14 @@ function Visual(options) {
     var h = this.height;
     var th = this.titleHeight;
     var r = this.radius;
-    var r1 = this.radius + .5;
+    var r1 = this.radius + 1.5;
     var r2 = this.radius + 1;
 
     context.beginPath();
-    context.arc(r1, r1, r, PI, PI32, false);
-    context.arc(w - r1, r1, r, PI32, 0, false);
-    context.arc(w - r1, h - r1, r, 0, PI12, false);
-    context.arc(r1, h - r1, r, PI12, PI, false);
+    context.arc(r1, r1, r2, PI, PI32, false);
+    context.arc(w - r1, r1, r2, PI32, 0, false);
+    context.arc(w - r1, h - r1, r2, 0, PI12, false);
+    context.arc(r1, h - r1, r2, PI12, PI, false);
     context.closePath();
     context.strokeStyle = this.borderColor;
     context.stroke();
@@ -2842,7 +2844,7 @@ function Visual(options) {
 
   Menu.prototype.add = function(item) {
     if (item === Menu.line) {
-      if (this.items.length) {
+      if (this.items.length && this.items[this.items.length - 1] !== Menu.line) {
         var s = el('Visual-menu-line');
         this.items.push(item);
         this.els.push(s);
