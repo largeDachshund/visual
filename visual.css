@@ -66,8 +66,7 @@ body.Visual-workspace {
 
 .Visual-field {
   color: #555;
-  font: 400 10px/12px Helvetica Neue, Helvetica, Arial, sans-serif;
-  /*font: 400 20px/24px Helvetica Neue, Helvetica, Arial, sans-serif;*/
+  font: 9px/14px Lucida Grande, Verdana, Arial, DejaVu Sans, sans-serif;
   margin: 0;
   padding: 0;
   border: 0;
@@ -92,8 +91,7 @@ body.Visual-workspace {
 /* Label */
 
 .Visual-label {
-  font: bold 10px/14px Helvetica, Arial, sans-serif;
-  /*font: bold 20px/28px Helvetica, Arial, sans-serif;*/
+  font: bold 10px/14px Lucida Grande, Verdana, Arial, DejaVu Sans, sans-serif;
   letter-spacing: .02em;
   color: #fff;
 }

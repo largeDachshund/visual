@@ -642,7 +642,7 @@ function Visual(options) {
   Block.prototype.paddingTop = 4;
   Block.prototype.hatPaddingTop = 3;
   Block.prototype.paddingBottom = 2;
-  Block.prototype.reporterPaddingX = 5;
+  Block.prototype.reporterPaddingX = 4;
   Block.prototype.reporterPaddingY = 2;
   Block.prototype.partPadding = 4;
   Block.prototype.lineSpacing = 2;
@@ -1222,7 +1222,7 @@ function Visual(options) {
         } else {
           this.width = w;
         }
-        this.height = metrics.height + 3;
+        this.height = metrics.height + 1;
         this.field.style.width = w + 'px';
         this.field.style.height = this.height + 'px';
         // this.field.style.lineHeight = this.height + 'px';
