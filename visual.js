@@ -1711,7 +1711,7 @@ function Visual(options) {
 
   def(Comment.prototype, 'state', {get: function() {
     return {
-      workspace: this.parent,
+      workspace: this.workspace,
       pos: this.workspacePosition
     };
   }});
@@ -1723,7 +1723,7 @@ function Visual(options) {
   def(Comment.prototype, 'dragObject', {get: function() {return this}});
 
   Comment.prototype.detach = function() {
-    return this;
+    return this.workspace.isPalette ? this.copy() : this;
   };
 
   Comment.prototype.click = function(x, y) {
@@ -2071,7 +2071,7 @@ function Visual(options) {
       script.layoutChildren();
       this.contentWidth = Math.max(this.contentWidth, this.paddingX + script.width + this.extraSpace)
       this.contentHeight = y + script.ownHeight + this.extraSpace;
-      if (script.isScript) this.el.appendChild(script.el);
+      if (!script.isElement) this.el.appendChild(script.el);
     }
 
     this.refill();
@@ -2596,7 +2596,7 @@ function Visual(options) {
         script: script
       });
     }
-    if (this.commandScript && script.parent.isWorkspace && !script.hasHat) {
+    if (this.commandScript && script.parent.isWorkspace && !script.hasHat && !script.isReporter) {
       this.addFeedback({
         x: x,
         y: y - this.commandScript.y,
@@ -2964,6 +2964,7 @@ function Visual(options) {
     Icon: Icon,
     Arg: Arg,
     Script: Script,
+    Comment: Comment,
     Workspace: Workspace,
     Palette: Palette,
     Target: Target,
