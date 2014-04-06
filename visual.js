@@ -41,6 +41,10 @@ function Visual(options) {
     e.stopPropagation();
   }
 
+  function setValue(value) {
+    this.value = value;
+  }
+
   function getEl(o) {
     return o.el;
   }
@@ -929,9 +933,10 @@ function Visual(options) {
   Arg.prototype.pathArgType = {
     b: 'pathBooleanShape',
     c: 'pathRectShape',
-    n: 'pathRoundedShape',
     d: 'pathRoundedShape',
+    l: 'pathNoShape',
     m: 'pathRectShape',
+    n: 'pathRoundedShape',
     s: 'pathRectShape'
   };
 
@@ -969,7 +974,7 @@ function Visual(options) {
         }
         return;
       }
-      if (this._type !== 'm' && (this._type !== 'd' || !isNaN(value))) {
+      if (this._type !== 'm' && this._type !== 'l' && (this._type !== 'd' || !isNaN(value))) {
         this._value = value;
         if (this.field) this.field.value = value;
         this.layout();
@@ -977,7 +982,7 @@ function Visual(options) {
       }
       this._value = value;
       var text = this.shouldTranslate(value) ? options.getText(value) : value;
-      if (this._type === 'm') {
+      if (this._type === 'm' || this._type === 'l') {
         this.field.textContent = text;
       } else {
         this.field.value = text;
@@ -1022,6 +1027,9 @@ function Visual(options) {
           arrow = true;
           this.field = el('Visual-absolute Visual-field Visual-enum-field');
           break;
+        case 'l':
+          this.field = el('Visual-absolute Visual-label');
+          break;
         case 't':
           this.script = new Script();
           this.script.parent = this;
@@ -1053,7 +1061,24 @@ function Visual(options) {
   def(Arg.prototype, 'workspacePosition', {get: getWorkspacePosition});
   def(Arg.prototype, 'worldPosition', {get: getWorldPosition});
 
-  def(Arg.prototype, 'contextMenu', {get: function() {return this.parent.contextMenu}});
+  def(Arg.prototype, 'contextMenu', {get: function() {
+    if (this._type === 'l' && this.menu) {
+      var m = this.parent.contextMenu || new Menu;
+      var src = options.getMenu(this);
+      if (src && src.items.length) {
+        m.add(Menu.line);
+        src.items.forEach(function(item) {
+          if (item === Menu.line || typeof item[1] === 'function') {
+            m.add(item);
+          } else {
+            m.add([item[0], setValue.bind(this, item[1])]);
+          }
+        }, this);
+      }
+      return m;
+    }
+    return this.parent.contextMenu;
+  }});
 
   def(Arg.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
@@ -1065,9 +1090,7 @@ function Visual(options) {
       var menu = options.getMenu(this);
       if (menu) {
         pos = pos || this.worldPosition;
-        menu.withAction(function(item) {
-          this.value = item;
-        }, this).showAt(pos.x, pos.y + this.height, this.app);
+        menu.withAction(setValue, this).showAt(pos.x, pos.y + this.height, this.app);
       }
     } else if (this.isTextArg) {
       this.field.select();
@@ -1090,6 +1113,7 @@ function Visual(options) {
   Arg.prototype.objectFromPoint = function(x, y) {
     switch (this._type) {
       case 'b': return null;
+      case 'l': return containsPoint(this, x, y) ? this : null;
       case 't': return this.script.objectFromPoint(x, y);
     }
     return transparentAt(this.context, x, y) ? this : null;
@@ -1115,7 +1139,7 @@ function Visual(options) {
 
   Arg.prototype.pathShadowOn = function(context) {
     if (this._type === 't') return;
-    this[this.pathArgType[this._type]].call(this, context);
+    this[this._type === 'l' ? 'pathRectShape' : this.pathArgType[this._type]].call(this, context);
     context.closePath();
   };
 
@@ -1153,6 +1177,8 @@ function Visual(options) {
     context.lineTo(w - r, h);
     context.lineTo(r, h);
   };
+
+  Arg.prototype.pathNoShape = function(context) {};
 
   Arg.prototype.drawArrow = function() {
     var w = 7;
@@ -1205,6 +1231,11 @@ function Visual(options) {
           this.arrowY = (this.height - this.arrow.height) / 2 | 0;
           setTransform(this.arrow, 'translate('+this.arrowX+'px, '+this.arrowY+'px)');
         }
+        break;
+      case 'l':
+        var metrics = Label.measure(this.field.textContent);
+        this.width = metrics.width;
+        this.height = metrics.height * 1.2 | 0;
         break;
       case 't':
         this.width = 0;
@@ -2583,7 +2614,12 @@ function Visual(options) {
 
   Menu.prototype.add = function(item) {
     if (item === Menu.line) {
-      if (this.items.length) this.el.appendChild(el('Visual-menu-line'));
+      if (this.items.length) {
+        var s = el('Visual-menu-line');
+        this.items.push(item);
+        this.els.push(s);
+        this.el.appendChild(s);
+      }
     } else if (item) {
       if (typeof item !== 'object') item = [item, item];
       var i = el('Visual-menu-item');
@@ -2615,7 +2651,7 @@ function Visual(options) {
     var items = this.items;
     for (var i = items.length; i--;) {
       var item = items[i];
-      if (!item.translated) {
+      if (item !== Menu.line && !item.translated) {
         item.translated = true;
         els[i].textContent = item[0] = options.getText(item[0]);
       }
