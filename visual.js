@@ -1287,8 +1287,6 @@ function Visual(options) {
   Script.prototype.isScript = true;
 
   Script.prototype.parent = null;
-  Script.prototype.x = 0;
-  Script.prototype.y = 0;
   Script.prototype.dirty = true;
 
   def(Script.prototype, 'app', {get: getApp});
@@ -1623,6 +1621,220 @@ function Visual(options) {
   Script.prototype.slideTo = slideTo;
 
 
+  function Comment(text, width, height, collapse) {
+    this.el = el('Visual-absolute Visual-comment');
+
+    this.el.appendChild(this.canvas = el('canvas', 'Visual-absolute'));
+    this.context = this.canvas.getContext('2d');
+
+    this.el.appendChild(this.title = el('Visual-comment-title Visual-absolute'));
+    setTransform(this.title, 'translate(16px,1px)');
+    this.title.style.height = this.title.style.lineHeight = this.titleHeight + 'px';
+
+    this.el.appendChild(this.field = el('textarea', 'Visual-comment-field Visual-absolute'));
+    setTransform(this.field, 'translate(0,'+this.titleHeight+'px)');
+
+    this.effectFns = [];
+    this.effects = [];
+
+    this.x = 0;
+    this.y = 0;
+    this.width = this.ownWidth = width || 150;
+    this.height = this.ownHeight = this.fullHeight = height || 200;
+
+    this.text = text || '';
+    this.collapse = !!collapse;
+  }
+
+  Comment.prototype.isComment = true;
+  Comment.prototype.isDraggable = true;
+
+  Comment.prototype.parent = null;
+  Comment.prototype.dirty = true;
+
+  Comment.prototype.titleHeight = 18;
+  Comment.prototype.radius = 5;
+  Comment.prototype.arrowColor = '#808080';
+  // Comment.prototype.borderColor = 'rgba(80, 80, 80, .2)';
+  Comment.prototype.borderColor = '#d0d1d2';
+  Comment.prototype.bodyColor = '#ffffd2';
+  Comment.prototype.titleColor = '#ffffa5';
+
+  def(Comment.prototype, 'app', {get: getApp});
+  def(Comment.prototype, 'workspace', {get: getWorkspace});
+  def(Comment.prototype, 'workspacePosition', {get: getWorkspacePosition});
+  def(Comment.prototype, 'worldPosition', {get: getWorldPosition});
+
+  def(Comment.prototype, 'text', {
+    get: function() {return this.field.value},
+    set: function(value) {
+      this.field.value = this.title.textContent = value;
+    }
+  });
+
+  def(Comment.prototype, 'collapse', {
+    get: function() {return this._collapse},
+    set: function(value) {
+      if (this._collapse !== value) {
+        this._collapse = value;
+        this.title.textContent = this.field.value;
+        this.layout();
+      }
+    }
+  });
+
+  def(Comment.prototype, 'contextMenu', {get: function() {
+    if (this.workspace.isPalette) {
+      return null;
+    }
+    var app = this.app;
+    var pressX = app.pressX;
+    var pressY = app.pressY;
+    return new Menu(
+      ['duplicate', function() {
+        var pos = this.worldPosition;
+        app.grab(this.copy(), pos.x - pressX, pos.y - pressY);
+      }],
+      Menu.line,
+      ['delete', this.destroy]).translate().withContext(this);
+  }});
+
+  Comment.prototype.destroy = function() {
+    if (!this.parent) return this;
+    if (this.parent) {
+      this.parent.remove(this);
+    }
+    return this;
+  };
+
+  def(Comment.prototype, 'state', {get: function() {
+    return {
+      workspace: this.parent,
+      pos: this.workspacePosition
+    };
+  }});
+
+  Comment.prototype.restore = function(state) {
+    state.workspace.add(state.pos.x, state.pos.y, this);
+  };
+
+  def(Comment.prototype, 'dragObject', {get: function() {return this}});
+
+  Comment.prototype.detach = function() {
+    return this;
+  };
+
+  Comment.prototype.click = function(x, y) {
+    if (y - this.worldPosition.y < this.titleHeight) {
+      this.collapse = !this.collapse;
+    } else {
+      this.field.focus();
+    }
+  };
+
+  Comment.prototype.copy = function() {
+    return new Comment(this.text, this.width, this.fullHeight, this.collapse);
+  };
+
+  Comment.prototype.shadow = Script.prototype.shadow;
+  Comment.prototype.addShadow = Script.prototype.addShadow;
+  Comment.prototype.removeShadow = Script.prototype.removeShadow;
+  Comment.prototype.outline = Script.prototype.outline;
+  Comment.prototype.addOutline = Script.prototype.addOutline;
+  Comment.prototype.removeOutline = Script.prototype.removeOutline;
+  Comment.prototype.addEffect = Script.prototype.addEffect;
+  Comment.prototype.removeEffect = Script.prototype.removeEffect;
+
+  Comment.prototype.layoutSelf = function() {
+    var w = this.width;
+    var h = this._collapse ? this.titleHeight + 2 : this.fullHeight;
+    if (this._collapse) {
+      this.title.style.width = (w - 20) + 'px';
+      this.field.style.visibility = 'hidden';
+      this.title.style.visibility = 'visible';
+    } else {
+      this.field.style.width = w + 'px';
+      this.field.style.height = (h - this.titleHeight) + 'px';
+      this.field.style.visibility = 'visible';
+      this.title.style.visibility = 'hidden';
+    }
+    this.canvas.width = this.ownWidth = w;
+    this.canvas.height = this.height = this.ownHeight = h;
+    this.draw(this.context);
+  };
+
+  Comment.prototype.draw = function(context) {
+    var w = this.width;
+    var h = this.height;
+    var th = this.titleHeight;
+    var r = this.radius;
+    var r1 = this.radius + .5;
+    var r2 = this.radius + 1;
+
+    context.beginPath();
+    context.arc(r1, r1, r, PI, PI32, false);
+    context.arc(w - r1, r1, r, PI32, 0, false);
+    context.arc(w - r1, h - r1, r, 0, PI12, false);
+    context.arc(r1, h - r1, r, PI12, PI, false);
+    context.closePath();
+    context.strokeStyle = this.borderColor;
+    context.stroke();
+
+    context.beginPath();
+    context.arc(r2, r2, r, PI, PI32, false);
+    context.arc(w - r2, r2, r, PI32, 0, false);
+    if (this._collapse) {
+      context.arc(w - r2, h - r2, r, 0, PI12, false);
+      context.arc(r2, h - r2, r, PI12, PI, false);
+    } else {
+      context.lineTo(w - 1, th);
+      context.lineTo(1, th);
+    }
+    context.fillStyle = this.titleColor;
+    context.fill();
+
+    if (!this._collapse) {
+      context.beginPath();
+      context.moveTo(1, th);
+      context.lineTo(w - 1, th);
+      context.arc(w - r2, h - r2, r, 0, PI12, false);
+      context.arc(r2, h - r2, r, PI12, PI, false);
+      context.fillStyle = this.bodyColor;
+      context.fill();
+    }
+
+    context.beginPath();
+    if (this._collapse) {
+      context.moveTo(6, 4);
+      context.lineTo(12, 9.5);
+      context.lineTo(6, 15);
+    } else {
+      context.moveTo(4, 6);
+      context.lineTo(9.5, 12);
+      context.lineTo(15, 6);
+    }
+    context.fillStyle = this.arrowColor;
+    context.fill();
+  };
+
+  Comment.prototype.pathShadowOn = function(context) {
+    var w = this.width;
+    var h = this.height;
+    var r = this.radius;
+    context.moveTo(0, r);
+    context.arc(r, r, r, PI, PI32, false);
+    context.arc(w - r, r, r, PI32, 0, false);
+    context.arc(w - r, h - r, r, 0, PI12, false);
+    context.arc(r, h - r, r, PI12, PI, false);
+  };
+
+  Comment.prototype.objectFromPoint = opaqueObjectFromPoint;
+  Comment.prototype.layoutChildren = layoutNoChildren;
+  Comment.prototype.layout = layout;
+  Comment.prototype.moveTo = moveTo;
+  Comment.prototype.slideTo = slideTo;
+
+
   function Workspace(host) {
     this.el = host;
     this.el.className += ' Visual-workspace Visual-no-select';
@@ -1661,9 +1873,15 @@ function Visual(options) {
 
   def(Workspace.prototype, 'contextMenu', {get: function() {
     if (this.isPalette) return;
+    var app = this.app;
+    var pos = this.worldPosition;
+    var pressX = app.pressX - pos.x;
+    var pressY = app.pressY - pos.y;
     return new Menu(
       ['clean up', this.cleanUp],
-      'add comment').translate().withContext(this);
+      ['add comment', function() {
+        this.add(new Comment('add comment here...').moveTo(pressX, pressY));
+      }]).translate().withContext(this);
   }});
 
   Workspace.prototype.add = function(x, y, script) {
@@ -1746,7 +1964,7 @@ function Visual(options) {
     for (var i = scripts.length; i--;) {
       var script = scripts[i];
       if (script === this.dragScript) return;
-      if (script.blocks.length === 0) {
+      if (script.isScript && script.blocks.length === 0) {
         this.remove(script);
         continue;
       }
@@ -1916,6 +2134,8 @@ function Visual(options) {
   PaletteElement.prototype.isElement = true;
 
   PaletteElement.prototype.parent = null;
+  PaletteElement.prototype.x = 0;
+  PaletteElement.prototype.y = 0;
   PaletteElement.prototype.dirty = true;
 
   PaletteElement.prototype.objectFromPoint = opaqueObjectFromPoint;
@@ -2068,7 +2288,7 @@ function Visual(options) {
     }
 
     this.dragScript = script;
-    this.dragScript.el.classList.add('Visual-script-dragging');
+    this.dragScript.el.classList.add('Visual-dragging');
     this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
     this.dragScript.parent = this;
     document.body.appendChild(this.dragScript.el);
@@ -2102,8 +2322,7 @@ function Visual(options) {
 
     if (this.pressObject && !this.dragging) {
       if (e.button === 0) {
-        this.shouldDrag = this.pressObject.isDraggable && !(this.pressObject.isTextArg && e.target === this.pressObject.field);
-
+        this.shouldDrag = this.pressObject.isDraggable && !((this.pressObject.isTextArg || this.pressObject.isComment) && e.target === this.pressObject.field);
       } else if (e.button === 2) {
         this.hideMenus();
         var cm = (this.pressObject || this).contextMenu;
@@ -2116,6 +2335,7 @@ function Visual(options) {
 
     if (this.shouldDrag) {
       document.activeElement.blur();
+      e.preventDefault();
     }
 
     this.pressed = true;
@@ -2213,7 +2433,7 @@ function Visual(options) {
 
     document.body.removeChild(this.dragScript.el);
     this.dragScript.parent = null;
-    this.dragScript.el.classList.remove('Visual-script-dragging');
+    this.dragScript.el.classList.remove('Visual-dragging');
     this.dragScript.removeShadow();
     this.feedback.style.display = 'none';
 
@@ -2232,14 +2452,14 @@ function Visual(options) {
       }
     }
     if (!handled && workspace && !workspace.isPalette) {
-      this.dragScript.el.classList.add('Visual-script-dragging');
-      this.dragScript.addShadow();
+      this.dragScript.el.classList.add('Visual-dragging');
+      this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
       document.body.appendChild(this.dragScript.el);
 
       var pos = workspace.worldPosition;
       script.slideTo(dragPos.x + pos.x, dragPos.y + pos.y, function() {
         document.body.removeChild(script.el);
-        script.el.classList.remove('Visual-script-dragging');
+        script.el.classList.remove('Visual-dragging');
         script.removeShadow();
         script.restore(state);
       }, this);
@@ -2282,8 +2502,10 @@ function Visual(options) {
     this.resetFeedback();
     if (this.dragScript.isReporter) {
       this.showReporterFeedback();
-    } else {
+    } else if (this.dragScript.isScript) {
       this.showCommandFeedback();
+    } else if (this.dragScript.isComment) {
+      this.showCommentFeedback();
     }
     if (this.feedbackInfo) {
       this.renderFeedback(this.feedbackInfo);
@@ -2320,6 +2542,10 @@ function Visual(options) {
     this.showFeedback(this.addScriptReporterFeedback);
   };
 
+  App.prototype.showCommentFeedback = function() {
+    this.showFeedback(function() {});
+  };
+
   App.prototype.showFeedback = function(p) {
     var workspaces = this.workspaces;
     if (this.dropWorkspace && this.dropWorkspace.isTarget) {
@@ -2354,6 +2580,7 @@ function Visual(options) {
   };
 
   App.prototype.addScriptCommandFeedback = function(x, y, script) {
+    if (!script.isScript) return;
     x += script.x;
     y += script.y;
     if (!script.hasFinal && !script.isReporter && !this.commandHasHat) {
@@ -2412,6 +2639,7 @@ function Visual(options) {
   };
 
   App.prototype.addScriptReporterFeedback = function(x, y, script) {
+    if (!script.isScript) return;
     x += script.x;
     y += script.y;
     var blocks = script.blocks;

@@ -41,16 +41,16 @@ body.Visual-workspace {
   pointer-events: none;
 }
 
+.Visual-dragging {
+  position: fixed;
+  z-index: 10001;
+}
+
 /* Script */
 
 .Visual-script {
   white-space: nowrap;
   pointer-events: none;
-}
-
-.Visual-script-dragging {
-  position: fixed;
-  z-index: 10001;
 }
 
 /* Arg */
@@ -96,6 +96,36 @@ body.Visual-workspace {
   color: #fff;
 }
 
+/* Comment */
+
+.Visual-comment {
+  pointer-events: none;
+}
+
+.Visual-comment-field {
+  font: 12px Arial, Verdana, DejaVu Sans, sans-serif;
+  padding: 4px 7px 4px 7px;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  border: 0;
+  margin: 0;
+  background: 0;
+  resize: none;
+  outline: 0;
+  color: #5c5d5f;
+}
+.Visual-comment-field:focus {
+  pointer-events: auto;
+}
+
+.Visual-comment-title {
+  font: bold 12px Arial, Verdana, DejaVu Sans, sans-serif;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #5c5d5f;
+}
+
 /* Menu */
 
 .Visual-menu {
@@ -121,7 +151,7 @@ body.Visual-workspace {
 
 .Visual-menu-item {
   padding: 3px 8px;
-  font: 12px Helvetica Neue, Helvetica, Arial, sans-serif;
+  font: 12px Arial, Verdana, DejaVu Sans, sans-serif;
   white-space: pre;
 }
 
