@@ -21,6 +21,12 @@ function Visual(options) {
       return m ? m(arg) : null;
     };
   }
+  if (!options.getText) {
+    options.getText = function(key) {
+      var translation = options.strings[key];
+      return translation == null ? key : translation;
+    };
+  }
   if (options.animationTime == null) options.animationTime = 0.3;
 
 
@@ -51,6 +57,10 @@ function Visual(options) {
       this.dirty = false;
       this.layoutSelf();
     }
+  }
+
+  function opaqueObjectFromPoint(x, y) {
+    return containsPoint(this, x, y) ? this : null;
   }
 
   function moveTo(x, y) {
@@ -245,7 +255,7 @@ function Visual(options) {
 
     this.name = info[2];
     this.type = info[0];
-    this.spec = info[1];
+    this.spec = options.getText(info[1]);
     this.color = category[2];
   }
 
@@ -254,6 +264,7 @@ function Visual(options) {
   var PI32 = Math.PI * 3/2;
 
   Block.prototype.isBlock = true;
+  Block.prototype.isDraggable = true;
 
   Block.prototype.parent = null;
   Block.prototype.dirty = true;
@@ -453,21 +464,21 @@ function Visual(options) {
 
   def(Block.prototype, 'contextMenu', {get: function() {
     if (this.workspace.isPalette) {
-      return this.help && new Menu(['Help', this.help]).withContext(this);
+      return this.help && new Menu(['help', this.help]).translate().withContext(this);
     }
     var app = this.app;
     var pressX = app.pressX;
     var pressY = app.pressY;
     return new Menu(
-      ['Duplicate', function() {
+      ['duplicate', function() {
         var pos = this.worldPosition;
         app.grab(this.scriptCopy(), pos.x - pressX, pos.y - pressY);
       }],
       Menu.line,
-      this.help && ['Help', this.help],
-      'Add Comment',
+      this.help && ['help', this.help],
+      'add comment',
       Menu.line,
-      ['Delete', this.destroy]).withContext(this);
+      ['delete', this.destroy]).translate().withContext(this);
   }});
 
   def(Block.prototype, 'dragObject', {get: function() {
@@ -925,6 +936,7 @@ function Visual(options) {
   };
 
   Arg.prototype.isArg = true;
+  Arg.prototype.isDraggable = true;
 
   Arg.prototype.parent = null;
   Arg.prototype.x = 0;
@@ -935,52 +947,49 @@ function Visual(options) {
 
   def(Arg.prototype, 'value', {
     get: function() {
-      switch (this._type) {
-        case 'c':
-        case 'd':
-        case 'n':
-        case 's':
-          return this.field.value;
-        case 'm':
-          return this._value;
-        case 't':
-          return this.script;
-      }
+      return this._type === 't' ? this.script : this._value;
     },
     set: function(value) {
-      switch (this._type) {
-        case 'c':
-        case 'd':
-        case 'n':
-        case 's':
-          this.field.value = value;
+      if (this._type === 't') {
+        if (value.isScript) {
+          this.el.removeChild(this.script.el);
+          this.script.parent = null;
+          this.script = value;
+          if (value.parent) value.parent.remove(value);
+          value.moveTo(0, 0);
+          value.parent = this;
+          this.el.appendChild(value.el);
           this.layout();
-          return;
-        case 'm':
-          this.field.textContent = this._value = value;
-          this.layout();
-          return;
-        case 't':
-          if (value.isScript) {
-            this.el.removeChild(this.script.el);
-            this.script.parent = null;
-            this.script = value;
-            if (value.parent) value.parent.remove(value);
-            value.moveTo(0, 0);
-            value.parent = this;
-            this.el.appendChild(value.el);
-            this.layout();
-          } else {
-            var script = new Script();
-            value.forEach(function(v) {
-              script.add(v);
-            }, this);
-            this.value = script;
-          }
-          return;
+        } else {
+          var script = new Script();
+          value.forEach(function(v) {
+            script.add(v);
+          }, this);
+          this.value = script;
+        }
+        return;
       }
+      if (this._type !== 'm' && (this._type !== 'd' || !isNaN(value))) {
+        this._value = value;
+        if (this.field) this.field.value = value;
+        this.layout();
+        return;
+      }
+      this._value = value;
+      var text = this.shouldTranslate(value) ? options.getText(value) : value;
+      if (this._type === 'm') {
+        this.field.textContent = text;
+      } else {
+        this.field.value = text;
+      }
+      this.layout();
+      return;
     }
   });
+
+  Arg.prototype.shouldTranslate = function(value) {
+    return true;
+  };
 
   def(Arg.prototype, 'type', {
     get: function() {return this._type},
@@ -1006,7 +1015,7 @@ function Visual(options) {
         case 'n':
         case 's':
           this.field = el('input', 'Visual-absolute Visual-field Visual-text-field');
-          this.field.addEventListener('input', this.layout.bind(this));
+          this.field.addEventListener('input', this.change.bind(this));
           this.isTextArg = true;
           break;
         case 'm':
@@ -1033,6 +1042,11 @@ function Visual(options) {
       this.layout();
     }
   });
+
+  Arg.prototype.change = function() {
+    this._value = this.field.value;
+    this.layout();
+  };
 
   def(Arg.prototype, 'app', {get: getApp});
   def(Arg.prototype, 'workspace', {get: getWorkspace});
@@ -1617,8 +1631,8 @@ function Visual(options) {
   def(Workspace.prototype, 'contextMenu', {get: function() {
     if (this.isPalette) return;
     return new Menu(
-      ['Clean Up', this.cleanUp],
-      'Add Comment').withContext(this);
+      ['clean up', this.cleanUp],
+      'add comment').translate().withContext(this);
   }});
 
   Workspace.prototype.add = function(x, y, script) {
@@ -1774,6 +1788,10 @@ function Visual(options) {
     };
   };
 
+  Palette.element = function(el) {
+    return new PaletteElement(el);
+  };
+
   Palette.prototype = Object.create(Workspace.prototype);
   Palette.prototype.constructor = Palette;
 
@@ -1798,10 +1816,11 @@ function Visual(options) {
       var y = this.scripts.length > 1 ? this.contentHeight - this.extraSpace + this.spacing : this.paddingY;
       script.moveTo(this.paddingX, y);
 
+      if (script.isElement) this.el.appendChild(script.el);
       script.layoutChildren();
       this.contentWidth = Math.max(this.contentWidth, this.paddingX + script.width + this.extraSpace)
       this.contentHeight = y + script.ownHeight + this.extraSpace;
-      this.el.appendChild(script.el);
+      if (script.isScript) this.el.appendChild(script.el);
     }
 
     this.refill();
@@ -1858,6 +1877,28 @@ function Visual(options) {
     this.refill()
   };
 
+  function PaletteElement(content) {
+    this.el = el('Visual-absolute');
+    this.el.appendChild(this.content = content);
+  }
+
+  PaletteElement.prototype.isElement = true;
+
+  PaletteElement.prototype.parent = null;
+  PaletteElement.prototype.dirty = true;
+
+  PaletteElement.prototype.objectFromPoint = opaqueObjectFromPoint;
+
+  PaletteElement.prototype.layoutSelf = function() {
+    this.width = this.ownWidth = this.content.offsetWidth;
+    this.height = this.ownHeight = this.content.offsetHeight;
+  };
+
+  PaletteElement.prototype.layoutChildren = layoutNoChildren;
+  PaletteElement.prototype.layout = layout;
+  PaletteElement.prototype.moveTo = moveTo;
+  PaletteElement.prototype.slideTo = slideTo;
+
 
   function Target(host) {
     this.el = host;
@@ -1875,9 +1916,7 @@ function Visual(options) {
   def(Target.prototype, 'workspacePosition', {get: function() {return {x: 0, y: 0}}});
   def(Target.prototype, 'worldPosition', {get: getWorldPosition});
 
-  Target.prototype.objectFromPoint = function() {
-    return null;
-  };
+  Target.prototype.objectFromPoint = opaqueObjectFromPoint;
 
   Target.prototype.resize = function() {
     this.width = this.el.offsetWidth;
@@ -1898,10 +1937,6 @@ function Visual(options) {
 
   Target.prototype.drop = function(script) {
     return true;
-  };
-
-  Target.prototype.objectFromPoint = function(x, y) {
-    return containsPoint(this, x, y) ? this : null;
   };
 
 
@@ -2036,7 +2071,7 @@ function Visual(options) {
 
     if (this.pressObject && !this.dragging) {
       if (e.button === 0) {
-        this.shouldDrag = !(this.pressObject.isWorkspace || this.pressObject.isPalette || this.pressObject.isTextArg && e.target === this.pressObject.field);
+        this.shouldDrag = this.pressObject.isDraggable && !(this.pressObject.isTextArg && e.target === this.pressObject.field);
 
       } else if (e.button === 2) {
         this.hideMenus();
@@ -2128,6 +2163,13 @@ function Visual(options) {
   App.prototype.updateMouse = function(e) {
     this.mouseX = e.clientX;
     this.mouseY = e.clientY;
+
+    var menus = this.menus;
+    if (menus.length) {
+      for (var i = menus.length; i--;) {
+        menus[i].updateMouse(e);
+      }
+    }
   };
 
   App.prototype.drop = function() {
@@ -2502,17 +2544,17 @@ function Visual(options) {
   function Menu(items) {
     this.el = el('Visual-menu Visual-no-select');
 
+    this.selectedIndex = -1;
     this.items = [];
+    this.els = [];
 
     items = [].slice.call(arguments);
     if (typeof items[0] === 'function') {
       this.action = items.shift();
     }
-    var length = items.length;
-    for (var i = 0; i < length; i++) {
-      this.add(items[i]);
-    }
+    this.addAll(items);
 
+    this.ignoreMouse = true;
     this.el.addEventListener('mouseup', this.mouseUp.bind(this), true);
   }
 
@@ -2541,15 +2583,44 @@ function Visual(options) {
 
   Menu.prototype.add = function(item) {
     if (item === Menu.line) {
-      this.el.appendChild(el('Visual-menu-line'));
+      if (this.items.length) this.el.appendChild(el('Visual-menu-line'));
     } else if (item) {
       if (typeof item !== 'object') item = [item, item];
       var i = el('Visual-menu-item');
       i.textContent = item[0];
       i.dataset.index = this.items.length;
       this.items.push(item);
+      this.els.push(i);
       this.el.appendChild(i);
     }
+    return this;
+  };
+
+  Menu.prototype.addTranslated = function(text) {
+    var item = [options.getText(text), text];
+    item.translated = true;
+    return this.add(item);
+  };
+
+  Menu.prototype.addAll = function(items) {
+    var length = items.length;
+    for (var i = 0; i < length; i++) {
+      this.add(items[i]);
+    }
+    return this;
+  };
+
+  Menu.prototype.translate = function() {
+    var els = this.els;
+    var items = this.items;
+    for (var i = items.length; i--;) {
+      var item = items[i];
+      if (!item.translated) {
+        item.translated = true;
+        els[i].textContent = item[0] = options.getText(item[0]);
+      }
+    }
+    return this;
   };
 
   Menu.prototype.show = function(app) {
@@ -2568,16 +2639,34 @@ function Visual(options) {
     this.moveTo(Math.max(p, Math.min(window.innerWidth - w - p, x)), Math.max(p, Math.min(window.innerHeight - h - p, y)));
   };
 
-  Menu.prototype.mouseUp = function(e) {
+  Menu.prototype.updateMouse = function(e) {
+    if (this.ignoreMouse) {
+      this.ignoreMouse = false;
+      return;
+    }
     var t = e.target;
     while (t) {
       if (t.parentNode === this.el && t.dataset.index) {
-        var i = t.dataset.index;
-        this.commit(i);
-        e.stopPropagation();
+        this.select(t.dataset.index);
+        return;
       }
       t = t.parentNode;
     }
+    this.select(-1);
+  };
+
+  Menu.prototype.select = function(i) {
+    if (this.selectedIndex !== -1) {
+      this.els[this.selectedIndex].classList.remove('selected');
+    }
+    this.selectedIndex = i;
+    if (i === -1) return;
+    this.els[i].classList.add('selected');
+  };
+
+  Menu.prototype.mouseUp = function(e) {
+    if (this.selectedIndex === -1) return;
+    this.commit(this.selectedIndex);
   };
 
   Menu.prototype.commit = function(index) {
@@ -2585,7 +2674,7 @@ function Visual(options) {
     if (typeof item[1] === 'function') {
       item[1].call(this.context);
     } else if (typeof this.action === 'function') {
-      this.action.call(this.context, item[1]);
+      this.action.call(this.context, item.length > 1 ? item[1] : item[0], item);
     }
     this.hide();
   };
@@ -2603,6 +2692,7 @@ function Visual(options) {
     getCategory: options.getCategory,
     getBlock: options.getBlock,
     getMenu: options.getMenu,
+    getText: options.getText,
     Block: Block,
     Label: Label,
     Icon: Icon,
