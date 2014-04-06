@@ -453,8 +453,7 @@ function Visual(options) {
 
   def(Block.prototype, 'contextMenu', {get: function() {
     if (this.workspace.isPalette) {
-      return new Menu(
-        'Help').withContext(this);
+      return this.help && new Menu(['Help', this.help]).withContext(this);
     }
     var app = this.app;
     var pressX = app.pressX;
@@ -465,7 +464,7 @@ function Visual(options) {
         app.grab(this.scriptCopy(), pos.x - pressX, pos.y - pressY);
       }],
       Menu.line,
-      'Help',
+      this.help && ['Help', this.help],
       'Add Comment',
       Menu.line,
       ['Delete', this.destroy]).withContext(this);
@@ -483,6 +482,7 @@ function Visual(options) {
   }});
 
   Block.prototype.click = function() {};
+  Block.prototype.help = null;
 
   Block.prototype.acceptsDropOf = function(b) {
     if (!this.parent || !this.parent.isBlock) return;
@@ -2542,7 +2542,7 @@ function Visual(options) {
   Menu.prototype.add = function(item) {
     if (item === Menu.line) {
       this.el.appendChild(el('Visual-menu-line'));
-    } else {
+    } else if (item) {
       if (typeof item !== 'object') item = [item, item];
       var i = el('Visual-menu-item');
       i.textContent = item[0];
