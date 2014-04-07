@@ -2295,7 +2295,8 @@ function Visual(options) {
     this.dragScript.parent = this;
     document.body.appendChild(this.dragScript.el);
     this.dragScript.layoutChildren();
-    this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
+    // this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
+    this.dragScript.addShadow(6, 6, 2, 'rgba(0, 0, 0, .4)');
     this.updateFeedback();
   };
 
@@ -2455,7 +2456,8 @@ function Visual(options) {
     }
     if (!handled && workspace && !workspace.isPalette) {
       this.dragScript.el.classList.add('Visual-dragging');
-      this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
+      // this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
+      this.dragScript.addShadow(6, 6, 2, 'rgba(0, 0, 0, .4)');
       document.body.appendChild(this.dragScript.el);
 
       var pos = workspace.worldPosition;
@@ -2894,6 +2896,7 @@ function Visual(options) {
   };
 
   Menu.prototype.showAt = function(x, y, app) {
+    if (!this.items.length) return;
     var p = this.padding;
     app.add(this);
     var w = this.el.offsetWidth;
@@ -2954,6 +2957,12 @@ function Visual(options) {
 
 
   return {
+    util: {
+      moveTo: moveTo,
+      slideTo: slideTo,
+      setTransform: setTransform,
+      setTransition: setTransition
+    },
     options: options,
     getCategory: options.getCategory,
     getBlock: options.getBlock,
