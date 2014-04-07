@@ -2566,10 +2566,11 @@ function Visual(options) {
     var t = e.target;
     var workspaceEls = this.workspaces.map(getEl);
     var menuEls = this.menus.map(getEl);
+    var isInput = false;
     while (t) {
       var n = t.tagName;
-      if (n === 'INPUT' || n === 'TEXTAREA' || t === 'SELECT') return 'input';
-      if (workspaceEls.indexOf(t) !== -1) return 'workspace';
+      if (n === 'INPUT' || n === 'TEXTAREA' || t === 'SELECT') isInput = true;
+      if (workspaceEls.indexOf(t) !== -1) return isInput ? 'input' : 'workspace';
       if (menuEls.indexOf(t) !== -1) return 'menu';
       t = t.parentNode;
     }
