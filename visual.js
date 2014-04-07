@@ -1713,12 +1713,18 @@ function Visual(options) {
 
   Comment.prototype.isComment = true;
   Comment.prototype.isDraggable = true;
+  Comment.prototype.isResizable = true;
 
   Comment.prototype.parent = null;
   Comment.prototype.dirty = true;
 
+  Comment.prototype.minWidth = 100;
+  Comment.prototype.minHeight = 34;
+
   Comment.prototype.titleHeight = 18;
   Comment.prototype.radius = 5;
+  Comment.prototype.resizerSize = 10;
+  Comment.prototype.resizerColor = '#606060';
   Comment.prototype.arrowColor = '#808080';
   // Comment.prototype.borderColor = 'rgba(80, 80, 80, .2)';
   Comment.prototype.borderColor = '#d0d1d2';
@@ -1801,6 +1807,16 @@ function Visual(options) {
     return new Comment(this.text, this.width, this.fullHeight, this.collapse);
   };
 
+  Comment.prototype.resizableAt = function(x, y) {
+    return x >= this.width - this.resizerSize - 2 && y >= this.height - this.resizerSize - 2;
+  };
+
+  Comment.prototype.resizeTo = function(w, h) {
+    this.width = w;
+    this.fullHeight = h;
+    this.layout();
+  };
+
   Comment.prototype.shadow = Script.prototype.shadow;
   Comment.prototype.addShadow = Script.prototype.addShadow;
   Comment.prototype.removeShadow = Script.prototype.removeShadow;
@@ -1880,6 +1896,17 @@ function Visual(options) {
     }
     context.fillStyle = this.arrowColor;
     context.fill();
+
+    if (!this._collapse) {
+      var s = this.resizerSize;
+      context.beginPath();
+      context.moveTo(w - s - 2, h - 2);
+      context.lineTo(w - 2, h - s - 2);
+      context.moveTo(w - s * .6 - 2, h - 2);
+      context.lineTo(w - 2, h - s * .6 - 2);
+      context.strokeStyle = this.resizerColor;
+      context.stroke();
+    }
   };
 
   Comment.prototype.pathShadowOn = function(context) {
@@ -2390,10 +2417,15 @@ function Visual(options) {
     this.pressY = this.mouseY;
     this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
     this.shouldDrag = false;
+    this.shouldResize = false;
 
     if (this.pressObject && !this.dragging) {
       if (e.button === 0) {
-        this.shouldDrag = this.pressObject.isDraggable && !((this.pressObject.isTextArg || this.pressObject.isComment) && e.target === this.pressObject.field);
+        if (this.pressObject.isResizable) {
+          var pos = this.pressObject.worldPosition;
+          this.shouldResize = this.pressObject.resizableAt(this.pressX - pos.x, this.pressY - pos.y);
+        }
+        this.shouldDrag = !this.shouldResize && this.pressObject.isDraggable && !((this.pressObject.isTextArg || this.pressObject.isComment) && e.target === this.pressObject.field);
       } else if (e.button === 2) {
         this.hideMenus();
         var cm = (this.pressObject || this).contextMenu;
@@ -2404,7 +2436,7 @@ function Visual(options) {
 
     this.drop();
 
-    if (this.shouldDrag) {
+    if (this.shouldDrag || this.shouldResize) {
       document.activeElement.blur();
       e.preventDefault();
     }
@@ -2428,6 +2460,12 @@ function Visual(options) {
       var pos = block.worldPosition;
       this.grab(block.detach(), pos.x - this.pressX, pos.y - this.pressY);
       e.preventDefault();
+    } else if (this.resizing) {
+      this.pressObject.resizeTo(Math.max(this.pressObject.minWidth, this.dragWidth + this.mouseX), Math.max(this.pressObject.minHeight, this.dragHeight + this.mouseY));
+    } else if (this.shouldResize) {
+      this.resizing = true;
+      this.dragWidth = this.pressObject.width - this.pressX;
+      this.dragHeight = this.pressObject.height - this.pressY;
     }
   };
 
@@ -2436,7 +2474,8 @@ function Visual(options) {
 
     if (this.dragging) {
       this.drop();
-    } else if (this.shouldDrag) {
+    } else if (this.resizing) {
+    } else if (this.shouldDrag || this.shouldResize) {
       this.pressObject.click(this.pressX, this.pressY);
     }
 
@@ -2444,7 +2483,9 @@ function Visual(options) {
     this.pressObject = null;
 
     this.dragging = false
+    this.resizing = false
     this.shouldDrag = false;
+    this.shouldResize = false;
     this.dragScript = null;
   };
 
