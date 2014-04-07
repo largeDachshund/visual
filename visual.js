@@ -2126,6 +2126,11 @@ function Visual(options) {
 
   function Palette(host) {
     Workspace.call(this, host);
+
+    this.cx = this.paddingX;
+    this.cy = this.paddingY;
+    this.lineHeight = 0;
+    this.line = [];
   }
 
   Palette.space = function(size) {
@@ -2137,6 +2142,10 @@ function Visual(options) {
 
   Palette.element = function(el) {
     return new PaletteElement(el);
+  };
+
+  Palette.inline = function(el) {
+    return new PaletteElement(el, true);
   };
 
   Palette.prototype = Object.create(Workspace.prototype);
@@ -2158,17 +2167,34 @@ function Visual(options) {
     script.parent = this;
 
     if (script.isSpace) {
-      this.contentHeight += script.size - (this.scripts.length > 1 ? this.spacing : 0);
+      this.cy += script.size - this.spacing;
+      this.lineHeight = 0;
     } else {
-      var y = this.scripts.length > 1 ? this.contentHeight - this.extraSpace + this.spacing : this.paddingY;
-      script.moveTo(this.paddingX, y);
+      script.moveTo(this.cx, this.cy);
 
-      if (script.isElement) this.el.appendChild(script.el);
+      if (script.isElement) document.body.appendChild(script.el);
       script.layoutChildren();
-      this.contentWidth = Math.max(this.contentWidth, this.paddingX + script.width + this.extraSpace)
-      this.contentHeight = y + script.ownHeight + this.extraSpace;
-      if (!script.isElement) this.el.appendChild(script.el);
+      this.lineHeight = Math.max(this.lineHeight, script.ownHeight);
+      this.contentWidth = Math.max(this.contentWidth, this.cx + script.ownWidth + this.extraSpace);
+      if (script.isInline) {
+        this.line.push(script);
+        this.cx += script.ownWidth + this.spacing;
+      } else {
+        for (var i = this.line.length; i--;) {
+          var s = this.line[i];
+          s.moveTo(s.x, this.cy + (this.lineHeight - s.ownHeight) / 2 | 0);
+        }
+        this.cy += this.lineHeight + this.spacing;
+      }
+      this.el.appendChild(script.el);
     }
+
+    if (!script.isInline) {
+      this.cx = this.paddingX;
+      this.lineHeight = 0;
+      this.line = [];
+    }
+    this.contentHeight = this.cy + this.lineHeight + this.extraSpace;
 
     this.refill();
     return this.dispatch('change');
@@ -2192,6 +2218,15 @@ function Visual(options) {
     return this.dispatch('change');
   };
 
+  Palette.prototype.clear = function() {
+    Workspace.prototype.clear.call(this);
+    this.cx = this.paddingX;
+    this.cy = this.paddingY;
+    this.lineHeight = 0;
+    this.line = [];
+    return this;
+  };
+
   Palette.prototype.refill = function() {
     this.fill.style.width = this.contentWidth + 'px';
     this.fill.style.height = this.contentHeight + 'px';
@@ -2204,27 +2239,58 @@ function Visual(options) {
     var es = this.extraSpace;
 
     var y = py;
+    var x = px;
     var w = 0;
+    var lh = 0;
+    var line = [];
     var scripts = this.scripts;
     var length = scripts.length;
     for (var i = 0; i < length; i++) {
       var s = scripts[i];
       if (s.isSpace) {
-        y += s.size - (i === 0 ? 0 : sp);
+        y += s.size - sp;
+        lh = 0;
       } else {
-        s.moveTo(px, y);
-        w = Math.max(w, s.ownWidth);
-        y += s.ownHeight + sp;
+        s.moveTo(x, y);
+        lh = Math.max(lh, s.ownHeight);
+        w = Math.max(w, x + s.ownWidth);
+        if (s.isInline) {
+          line.push(s);
+          x += s.ownWidth + sp;
+        } else {
+          for (var j = line.length; j--;) {
+            var s2 = line[j];
+            s2.moveTo(s2.x, y + (lh - s2.ownHeight) / 2 | 0);
+          }
+          y += s.ownHeight + sp;
+        }
+      }
+      if (!s.isInline) {
+        x = px;
+        lh = 0;
+        line = [];
       }
     }
 
-    this.contentHeight = y - sp + es;
-    this.contentWidth = px + w + es;
+    if (s && s.isInline) {
+      this.lineHeight = lh;
+      this.line = line;
+    } else {
+      this.lineHeight = 0;
+      this.line = [];
+    }
+    this.cx = x;
+    this.cy = y;
+
+    this.contentHeight = y + lh + es;
+    this.contentWidth = w + es;
     this.refill()
   };
 
-  function PaletteElement(content) {
+  function PaletteElement(content, inline) {
+    this.isInline = inline;
     this.el = el('Visual-absolute');
+    content.style.display = 'block';
     this.el.appendChild(this.content = content);
   }
 
