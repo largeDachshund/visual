@@ -377,7 +377,7 @@ function Visual(options) {
       var w = this.ownWidth;
       var h = this.ownHeight - p;
       var hh = this.hatHeight;
-      var hp = this.hatPaddingTop;
+      var hp = this.paddingTop;
       var hw = this.hatWidth;
       context.moveTo(0, hh);
       context.quadraticCurveTo(.125*hw, .15*hh, hw/2, 0);
