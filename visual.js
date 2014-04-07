@@ -51,6 +51,63 @@ function Visual(options) {
     return o.el;
   }
 
+  function dispatch(event, object) {
+    if (!object) object = {};
+    object.type = event;
+    if (!this.listeners) return this;
+    var listeners = this.listeners[event];
+    if (!listeners || !listeners.length) return this;
+    for (var i = listeners.length; i--;) {
+      var l = listeners[i];
+      l.fn.call(l.context);
+      if (l.transient) listeners.splice(i, 1);
+    }
+    return this;
+  }
+
+  function addListener(event, fn, context) {
+    if (!this.listeners) this.listeners = {};
+    var listener = {fn: fn, context: context};
+    var l = this.listeners[event];
+    if (l) {
+      l.push(listener);
+    } else {
+      this.listeners[event] = [listener];
+    }
+    return this;
+  }
+
+  function addListenerOnce(event, fn, context) {
+    if (!this.listeners) this.listeners = {};
+    var listener = {fn: fn, context: context, transient: true};
+    var l = this.listeners[event];
+    if (l) {
+      l.push(listener);
+    } else {
+      this.listeners[event] = [listener];
+    }
+    return this;
+  }
+
+  function removeListener(event, fn) {
+    if (!this.listeners) return this;
+    var l = this.listeners[event];
+    if (!l) return this;
+    for (var i = l.length; i--;) {
+      if (l[i].fn === fn) {
+        l.splice(i, 1);
+        return this;
+      }
+    }
+    return this;
+  }
+
+  function removeAllListeners(event) {
+    if (!this.listeners) return this;
+    this.listeners[event] = null;
+    return this;
+  }
+
   function layout() {
     if (!this.parent) return;
 
@@ -1902,7 +1959,7 @@ function Visual(options) {
 
     this.el.appendChild(script.el);
 
-    return this;
+    return this.dispatch('change');
   };
 
   Workspace.prototype.remove = function(script) {
@@ -1914,7 +1971,7 @@ function Visual(options) {
     this.el.removeChild(script.el);
     this.layout();
 
-    return this;
+    return this.dispatch('change');
   };
 
   Workspace.prototype.clear = function() {
@@ -1928,7 +1985,7 @@ function Visual(options) {
     this.contentWidth = this.paddingX + this.extraSpace;
     this.contentHeight = this.paddingY + this.extraSpace;
     this.refill();
-    return this;
+    return this.dispatch('change');
   };
 
   Workspace.prototype.objectFromPoint = function(x, y) {
@@ -2027,6 +2084,12 @@ function Visual(options) {
     this.layout();
   };
 
+  Workspace.prototype.dispatch = dispatch;
+  Workspace.prototype.on = addListener;
+  Workspace.prototype.once = addListenerOnce;
+  Workspace.prototype.removeListener = removeListener;
+  Workspace.prototype.removeAllListeners = removeAllListeners;
+
 
   function Palette(host) {
     Workspace.call(this, host);
@@ -2075,7 +2138,7 @@ function Visual(options) {
     }
 
     this.refill();
-    return this;
+    return this.dispatch('change');
   };
 
   Palette.prototype.insert = function(script, before) {
@@ -2093,8 +2156,7 @@ function Visual(options) {
     }
 
     this.layout();
-
-    return this;
+    return this.dispatch('change');
   };
 
   Palette.prototype.refill = function() {
