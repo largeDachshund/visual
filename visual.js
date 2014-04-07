@@ -475,6 +475,10 @@ function Visual(options) {
       this.isCommand = value === 'c' || value === 'f';
       this.isReporter = value === 'r' || value === 'b';
       this.isBoolean = value === 'b';
+      var p = this.padding[value];
+      this.paddingTop = p[0];
+      this.paddingX = p[p[1] == null ? 0 : 1];
+      this.paddingBottom = p[p[2] == null ? 0 : 2];
 
       this.layout();
     }
@@ -697,12 +701,13 @@ function Visual(options) {
     }
   };
 
-  Block.prototype.paddingX = 6;
-  Block.prototype.paddingTop = 4;
-  Block.prototype.hatPaddingTop = 3;
-  Block.prototype.paddingBottom = 2;
-  Block.prototype.reporterPaddingX = 4;
-  Block.prototype.reporterPaddingY = 2;
+  Block.prototype.padding = {
+    c: [4, 6, 2],
+    f: [4, 6, 2],
+    r: [3, 4, 1],
+    b: [3, 4, 2],
+    h: [3, 6, 2]
+  };
   Block.prototype.partPadding = 4;
   Block.prototype.lineSpacing = 2;
   Block.prototype.scriptPadding = 15;
@@ -710,8 +715,8 @@ function Visual(options) {
   Block.prototype.minDistance = function(part) {
     if (this.isBoolean) {
       return (
-        part.isBlock && part._type === 'r' && !part.hasScript ? this.reporterPaddingX + part.height/4 | 0 :
-        part._type !== 'b' ? this.reporterPaddingX + part.height/2 | 0 :
+        part.isBlock && part._type === 'r' && !part.hasScript ? this.paddingX + part.height/4 | 0 :
+        part._type !== 'b' ? this.paddingX + part.height/2 | 0 :
         0);
     }
     if (this.isReporter) {
@@ -723,9 +728,9 @@ function Visual(options) {
   };
 
   Block.prototype.layoutSelf = function() {
-    var xp = this.isReporter ? this.reporterPaddingX : this.paddingX;
-    var tp = this.isReporter ? this.reporterPaddingY : this.paddingTop;
-    var bp = this.isReporter ? this.reporterPaddingY : this.paddingBottom;
+    var xp = this.paddingX;
+    var tp = this.paddingTop - (this.hasScript ? 1 : 0);
+    var bp = this.paddingBottom;
     var pp = this.partPadding;
     var ls = this.lineSpacing;
     var sp = this.scriptPadding;
@@ -786,7 +791,7 @@ function Visual(options) {
       } else {
         for (var j = 0, l = line.length; j < l; j++) {
           var p = line[j];
-          p.moveTo(xp + xs[j], y + ((lh - p.height) / 2 | 0));
+          p.moveTo(xp + xs[j], y + ((lh - p.height) / 2 | 0) - (p.isBlock ? 1 : 0));
         }
       }
       y += lh + ls;
@@ -1217,11 +1222,12 @@ function Visual(options) {
   Arg.prototype.pathRectShape = function(context) {
     var w = this.width;
     var h = this.height;
+    var y = this._type === 's' ? .5 : 0;
 
-    context.moveTo(0, 0);
-    context.lineTo(w, 0);
-    context.lineTo(w, h);
-    context.lineTo(0, h);
+    context.moveTo(0, y);
+    context.lineTo(w, y);
+    context.lineTo(w, h-y);
+    context.lineTo(0, h-y);
   };
 
   Arg.prototype.pathBooleanShape = function(context) {
