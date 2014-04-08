@@ -1725,9 +1725,9 @@ function Visual(options) {
   Comment.prototype.radius = 5;
   Comment.prototype.resizerSize = 10;
   Comment.prototype.resizerColor = '#606060';
-  Comment.prototype.arrowColor = '#808080';
-  // Comment.prototype.borderColor = 'rgba(80, 80, 80, .2)';
-  Comment.prototype.borderColor = '#d0d1d2';
+  Comment.prototype.arrowColor = 'rgba(80, 80, 80, .8)';
+  Comment.prototype.borderColor = 'rgba(80, 80, 80, .2)'; // NS
+  // Comment.prototype.borderColor = '#d0d1d2';
   Comment.prototype.bodyColor = '#ffffd2';
   Comment.prototype.titleColor = '#ffffa5';
 
@@ -2456,8 +2456,8 @@ function Visual(options) {
     this.dragScript.parent = this;
     document.body.appendChild(this.dragScript.el);
     this.dragScript.layoutChildren();
-    // this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
-    this.dragScript.addShadow(6, 6, 2, 'rgba(0, 0, 0, .4)');
+    this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)'); // NS
+    // this.dragScript.addShadow(6, 6, 2, 'rgba(0, 0, 0, .4)');
     this.updateFeedback();
   };
 
@@ -2632,8 +2632,8 @@ function Visual(options) {
     }
     if (!handled && workspace && !workspace.isPalette) {
       this.dragScript.el.classList.add('Visual-dragging');
-      // this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)');
-      this.dragScript.addShadow(6, 6, 2, 'rgba(0, 0, 0, .4)');
+      this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)'); // NS
+      // this.dragScript.addShadow(6, 6, 2, 'rgba(0, 0, 0, .4)');
       document.body.appendChild(this.dragScript.el);
 
       var pos = workspace.worldPosition;
