@@ -51,6 +51,10 @@ function Visual(options) {
     return o.el;
   }
 
+  function copy(o) {
+    return o.copy();
+  }
+
   function dispatch(event, object) {
     if (!object) object = {};
     object.type = event;
@@ -664,8 +668,7 @@ function Visual(options) {
   };
 
   Block.prototype.copy = function() {
-    var args = this.args.map(function(a) {return a.copy()});
-    return new Block(this.name, args);
+    return new Block(this.name, this.args.map(copy));
   };
 
   Block.prototype.scriptCopy = function() {
@@ -1614,13 +1617,13 @@ function Visual(options) {
     this.el.removeChild(block.el);
 
     this.layout();
-
     return this;
   };
 
   Script.prototype.copy = function() {
     var script = new Script();
-    script.addScript({blocks: this.blocks.map(function(b) {return b.copy()})});
+    script.moveTo(this.x, this.y);
+    script.addScript({blocks: this.blocks.map(copy)});
     return script;
   };
 
@@ -1628,7 +1631,7 @@ function Visual(options) {
     var script = new Script();
     var i = this.blocks.indexOf(b);
     if (i === -1) return script;
-    script.addScript({blocks: this.blocks.slice(i).map(function(b) {return b.copy()})});
+    script.addScript({blocks: this.blocks.slice(i).map(copy)});
     return script;
   };
 
