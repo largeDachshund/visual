@@ -3050,6 +3050,10 @@ function Visual(options) {
     return this;
   };
 
+  Menu.prototype.addLine = function() {
+    return this.add(Menu.line);
+  };
+
   Menu.prototype.addTranslated = function(text) {
     var item = [options.getText(text), text];
     item.translated = true;
@@ -3082,6 +3086,10 @@ function Visual(options) {
   };
 
   Menu.prototype.showAt = function(x, y, app) {
+    while (this.items[this.items.length-1] === Menu.line) {
+      this.items.pop();
+      this.el.removeChild(this.els.pop());
+    }
     if (!this.items.length) return;
     var p = this.padding;
     app.add(this);
