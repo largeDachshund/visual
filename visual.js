@@ -2377,6 +2377,15 @@ function Visual(options) {
 
   App.prototype.parent = null;
 
+  App.prototype.dragShadowX = 6; // NS
+  App.prototype.dragShadowY = 6;
+  App.prototype.dragShadowBlur = 8;
+  App.prototype.dragShadowColor = 'rgba(0, 0, 0, .2)';
+  // App.prototype.dragShadowX = 6;
+  // App.prototype.dragShadowY = 6;
+  // App.prototype.dragShadowBlur = 2;
+  // App.prototype.dragShadowColor = 'rgba(0, 0, 0, .4)';
+
   def(App.prototype, 'app', {get: function() {return this}});
 
   App.prototype.objectFromPoint = function(x, y) {
@@ -2459,8 +2468,7 @@ function Visual(options) {
     this.dragScript.parent = this;
     document.body.appendChild(this.dragScript.el);
     this.dragScript.layoutChildren();
-    this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)'); // NS
-    // this.dragScript.addShadow(6, 6, 2, 'rgba(0, 0, 0, .4)');
+    this.dragScript.addShadow(this.dragShadowX, this.dragShadowY, this.dragShadowBlur, this.dragShadowColor);
     this.updateFeedback();
   };
 
@@ -2635,8 +2643,7 @@ function Visual(options) {
     }
     if (!handled && workspace && !workspace.isPalette) {
       this.dragScript.el.classList.add('Visual-dragging');
-      this.dragScript.addShadow(6, 6, 8, 'rgba(0, 0, 0, .3)'); // NS
-      // this.dragScript.addShadow(6, 6, 2, 'rgba(0, 0, 0, .4)');
+      this.dragScript.addShadow(this.dragShadowX, this.dragShadowY, this.dragShadowBlur, this.dragShadowColor);
       document.body.appendChild(this.dragScript.el);
 
       var pos = workspace.worldPosition;
