@@ -2992,6 +2992,7 @@ function Visual(options) {
 
   function Menu(items) {
     this.el = el('Visual-menu Visual-no-select');
+    this.el.appendChild(this.field = el('input', 'Visual-menu-field'));
 
     this.selectedIndex = -1;
     this.items = [];
@@ -3004,7 +3005,11 @@ function Visual(options) {
     this.addAll(items);
 
     this.ignoreMouse = true;
+    this.cancelTyping = this.cancelTyping.bind(this);
+
     this.el.addEventListener('mouseup', this.mouseUp.bind(this), true);
+    this.field.addEventListener('keydown', this.keyDown.bind(this));
+    this.field.addEventListener('input', this.input.bind(this));
   }
 
   Menu.line = {};
@@ -3100,6 +3105,7 @@ function Visual(options) {
     this.el.style.maxWidth = (window.innerWidth - p * 2)+'px';
     this.el.style.maxHeight = (window.innerHeight - p * 2)+'px';
     this.moveTo(Math.max(p, Math.min(window.innerWidth - w - p, x)), Math.max(p, Math.min(window.innerHeight - h - p, y)));
+    this.field.focus();
   };
 
   Menu.prototype.updateMouse = function(e) {
@@ -3148,6 +3154,52 @@ function Visual(options) {
 
   Menu.prototype.moveTo = moveTo;
   Menu.prototype.slideTo = slideTo;
+
+  Menu.prototype.typeDelay = 600;
+  Menu.prototype.input = function() {
+    if (this.typeTimeout) clearTimeout(this.typeTimeout);
+    this.typeTimeout = setTimeout(this.cancelTyping, this.typeDelay);
+    var search = this.field.value.toLowerCase();
+    var sl = search.length;
+    var items = this.items;
+    for (var i = 0, l = items.length; i < l; i++) {
+      if (items[i] !== Menu.line && items[i][0].slice(0, sl).toLowerCase() === search) {
+        return this.select(i);
+      }
+    }
+  };
+
+  Menu.prototype.cancelTyping = function() {
+    this.typeTimeout = null;
+    this.field.value = '';
+  };
+
+  Menu.prototype.keyDown = function(e) {
+    if (e.keyCode === 13 || e.keyCode === 32 && this.typeTimeout == null) {
+      if (this.selectedIndex !== -1) this.commit(this.selectedIndex);
+    } else if (e.keyCode === 27) {
+      this.hide();
+    } else if (e.keyCode === 40) {
+      var i = this.selectedIndex;
+      do {
+        i = (i + 1) % this.items.length;
+      } while (this.items[i] === Menu.line);
+      this.select(i);
+    } else if (e.keyCode === 38) {
+      var i = this.selectedIndex;
+      do {
+        if (i <= 0) {
+          i = this.items.length - 1;
+        } else {
+          i = i - 1;
+        }
+      } while (this.items[i] === Menu.line);
+      this.select(i);
+    } else {
+      var unused = true;
+    }
+    if (!unused) e.preventDefault();
+  };
 
 
   return {

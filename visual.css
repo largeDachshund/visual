@@ -143,6 +143,17 @@ body.Visual-workspace {
   color: #555;
 }
 
+.Visual-menu-field {
+  position: fixed;
+  top: -10000px;
+  left: -10000px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  width: 1px;
+  height: 1px;
+}
+
 .Visual-menu-line {
   margin: 0;
   height: 1px;
