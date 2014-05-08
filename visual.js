@@ -55,6 +55,10 @@ function Visual(options) {
     return o.copy();
   }
 
+  function resize(o) {
+    if (o.resize) o.resize();
+  }
+
   function dispatch(event, object) {
     if (!object) object = {};
     object.type = event;
@@ -2365,6 +2369,7 @@ function Visual(options) {
 
 
   function App() {
+    this.children = [];
     this.workspaces = [];
     this.palettes = [];
     this.menus = [];
@@ -2408,10 +2413,16 @@ function Visual(options) {
 
   App.prototype.layout = function() {};
 
+  App.prototype.resize = function() {
+    this.children.forEach(resize);
+  };
+
   App.prototype.add = function(thing) {
     if (thing.parent) thing.parent.remove(thing);
 
     thing.parent = this;
+    this.children.push(thing);
+
     if (thing.isPalette) {
       this.palettes.push(thing);
     }
@@ -2432,18 +2443,20 @@ function Visual(options) {
   App.prototype.remove = function(thing) {
     if (thing.parent !== this) return this;
     thing.parent = null;
+    var i = this.children.indexOf(thing);
+    if (i !== -1) this.children.splice(i, 1);
 
     if (thing.isPalette) {
       var i = this.palettes.indexOf(thing);
-      this.palettes.splice(i, 1);
+      if (i !== -1) this.palettes.splice(i, 1);
     }
     if (thing.isWorkspace) {
       var i = this.workspaces.indexOf(thing);
-      this.workspaces.splice(i, 1);
+      if (i !== -1) this.workspaces.splice(i, 1);
     }
     if (thing.isMenu) {
       var i = this.menus.indexOf(thing);
-      this.menus.splice(i, 1);
+      if (i !== -1) this.menus.splice(i, 1);
       thing.el.parentNode.removeChild(thing.el);
     }
     if (thing.uninstall) {
