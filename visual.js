@@ -246,7 +246,7 @@ function Visual(options) {
     el.style.transition = transition;
   }
 
-  function bezel(context, path, thisArg, inset, alpha) {
+  function bezel(context, path, thisArg, inset) {
     var s = inset ? -1 : 1;
     var w = context.canvas.width;
     var h = context.canvas.height;
@@ -266,7 +266,6 @@ function Visual(options) {
     context.closePath();
     path.call(thisArg, context);
 
-    // if (alpha) context.fillStyle = '#000';
     context.globalCompositeOperation = 'source-atop';
 
     context.shadowOffsetX = 10000 + s * -1;
@@ -473,12 +472,15 @@ function Visual(options) {
     get: function() {return this._type},
     set: function(value) {
       this._type = value;
+      this.pathFn = this.pathBlockType[value];
+
       this.isHat = value === 'h';
       this.hasPuzzle = value === 'c' || value === 'h';
       this.isFinal = value === 'f';
       this.isCommand = value === 'c' || value === 'f';
       this.isReporter = value === 'r' || value === 'b';
       this.isBoolean = value === 'b';
+
       var p = this.padding[value];
       this.paddingTop = p[0];
       this.paddingX = p[p[1] == null ? 0 : 1];
@@ -814,7 +816,7 @@ function Visual(options) {
   };
 
   Block.prototype.pathBlock = function(context) {
-    this.pathBlockType[this._type].call(this, context);
+    this.pathFn(context);
     context.closePath();
     var w = this.ownWidth;
     var r = this.radius;
@@ -1067,6 +1069,7 @@ function Visual(options) {
     get: function() {return this._type},
     set: function(value) {
       this._type = value;
+      this.pathFn = this[this.pathArgType[value]];
 
       while (this.el.firstChild) {
         this.el.removeChild(this.el.lastChild);
@@ -1201,12 +1204,16 @@ function Visual(options) {
     context.fillStyle =
       field ? '#fff' :
       this._type === 'c' ? this.field.value : this.color;
-    bezel(context, this[this.pathArgType[this._type]], this, true, !field);
+    bezel(context, this.pathFn, this, true);
   };
 
   Arg.prototype.pathShadowOn = function(context) {
     if (this._type === 't') return;
-    this[this._type === 'l' ? 'pathRectShape' : this.pathArgType[this._type]].call(this, context);
+    if (this._type === 'l') {
+      this.pathRectShape(context);
+    } else {
+      this.pathFn(context);
+    }
     context.closePath();
   };
 
