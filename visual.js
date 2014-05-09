@@ -1157,6 +1157,9 @@ function Visual(options) {
   def(Arg.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
   Arg.prototype.click = function(x, y) {
+    if (this._type === 'l' || this._type === 'b') {
+      return this.parent.click(x, y);
+    }
     if (this._type === 'd') {
       var pos = this.worldPosition;
     }
