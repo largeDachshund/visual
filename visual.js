@@ -1021,6 +1021,7 @@ function Visual(options) {
   Arg.prototype.y = 0;
   Arg.prototype.dirty = true;
 
+  Arg.prototype.insetColor = 'rgba(0, 0, 0, .1)';
   Arg.prototype.fieldPadding = 4;
 
   def(Arg.prototype, 'value', {
@@ -1285,7 +1286,7 @@ function Visual(options) {
       var c = can.getContext('2d');
       c.fillStyle = this.parent.color;
       c.fillRect(0, 0, 1, 1);
-      c.fillStyle = 'rgba(0, 0, 0, .1)';
+      c.fillStyle = this.insetColor;
       c.fillRect(0, 0, 1, 1);
       var d = c.getImageData(0, 0, 1, 1).data;
       var s = (d[0] * 0x10000 + d[1] * 0x100 + d[2]).toString(16);
