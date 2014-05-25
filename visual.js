@@ -38,11 +38,6 @@ function Visual(options) {
     return d;
   }
 
-  function ignoreEvent(e) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
   function setValue(value) {
     this.value = value;
   }
@@ -158,7 +153,7 @@ function Visual(options) {
     var self = this;
     setTimeout(function() {
       setTransition(self.el, '');
-      if (callback) callback.call(context)
+      if (callback) callback.call(context);
     }, time * 1000);
     return this;
   }
@@ -378,11 +373,7 @@ function Visual(options) {
     },
     h: function(context) {
       var r = this.radius;
-      var p = this.puzzle;
-      var pi = this.puzzleInset;
-      var pw = this.puzzleWidth;
       var w = this.ownWidth;
-      var h = this.ownHeight - p;
       var hh = this.hatHeight;
       var hp = this.paddingTop;
       var hw = this.hatWidth;
@@ -441,7 +432,7 @@ function Visual(options) {
         i++;
         if (i >= parts.length) break;
         if (parts[i]) {
-          this.add(new Icon(parts[i]))
+          this.add(new Icon(parts[i]));
         }
         i++;
         if (parts[i]) {
@@ -1091,7 +1082,7 @@ function Visual(options) {
           break;
         case 'd':
           arrow = true;
-          // fall through
+          /* falls through */
         case 'n':
         case 's':
           this.field = el('input', 'Visual-absolute Visual-field Visual-text-field');
@@ -2302,7 +2293,7 @@ function Visual(options) {
 
     this.contentHeight = y + lh + es;
     this.contentWidth = w + es;
-    this.refill()
+    this.refill();
   };
 
   function PaletteElement(content, inline) {
@@ -2583,8 +2574,8 @@ function Visual(options) {
     this.pressed = false;
     this.pressObject = null;
 
-    this.dragging = false
-    this.resizing = false
+    this.dragging = false;
+    this.resizing = false;
     this.shouldDrag = false;
     this.shouldResize = false;
     this.dragScript = null;
