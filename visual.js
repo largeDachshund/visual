@@ -1345,7 +1345,7 @@ function Visual(options) {
   Arg.prototype.slideTo = slideTo;
 
 
-  function Script() {
+  function Script(blocks) {
     this.el = el('Visual-absolute Visual-script');
 
     this.effectFns = [];
@@ -1356,6 +1356,8 @@ function Visual(options) {
     this.y = 0;
     this.width = 0;
     this.height = 0;
+
+    if (blocks) this.addAll(blocks);
   }
 
   Script.prototype.isScript = true;
@@ -1526,6 +1528,28 @@ function Visual(options) {
     return this;
   };
 
+  Script.prototype.addAll = function(blocks) {
+    var f = document.createDocumentFragment();
+
+    var length = blocks.length;
+    for (var i = 0; i < length; i++) {
+      var b = blocks[i];
+      if (b.parent) b.parent.remove(b);
+      b.parent = this;
+      f.appendChild(b.el);
+    }
+
+    this.blocks.push.apply(this.blocks, blocks);
+    this.el.appendChild(f);
+
+    for (var i = 0; i < length; i++) {
+      blocks[i].layoutChildren();
+    }
+
+    this.layout();
+    return this;
+  };
+
   Script.prototype.addScript = function(script) {
     var f = document.createDocumentFragment();
 
@@ -1562,7 +1586,6 @@ function Visual(options) {
     var i = this.blocks.indexOf(beforeBlock);
     this.blocks.splice(i, 0, block);
     this.el.insertBefore(block.el, beforeBlock.el);
-
 
     if (this.parent) block.layoutChildren();
     this.layout();
