@@ -665,7 +665,10 @@ function Visual(options) {
   };
 
   Block.prototype.copy = function() {
-    return new Block(this.name, this.args.map(copy));
+    var b = new Block(this.name, this.args.map(copy));
+    if (b._type !== this._type) b.type = this._type;
+    if (b._color !== this._color) b.color = this._color;
+    return b;
   };
 
   Block.prototype.scriptCopy = function() {
