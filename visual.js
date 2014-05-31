@@ -5,14 +5,18 @@ function Visual(options) {
 
 
   if (!options.getBlock) {
-    options.getBlock = function(name) {
+    options.getBlock = function(name, hint) {
       var b = options.blocks[name];
-      return b.slice(0, 2).concat(name, b.slice(2));
+      if (b) return b.slice(0, 2).concat(name, b.slice(2));
+      if (!hint) hint = {};
+      if (!hint.name) hint.name = name;
+      return obsoleteBlock(hint);
     };
   }
   if (!options.getCategory) {
     options.getCategory = function(name) {
-      return [name].concat(options.categories[name]);
+      var cat = options.categories[name];
+      return cat ? [name].concat(cat) : [undefined, 'Undefined', '#d42828'];
     };
   }
   if (!options.getMenu) {
@@ -30,6 +34,12 @@ function Visual(options) {
     if (!options.strings) options.strings = {};
   }
   if (options.animationTime == null) options.animationTime = 0.3;
+
+
+  function obsoleteBlock(hint) {
+    var args = hint && hint.argTypes ? hint.argTypes.map(function(t) {return ' %' + t}).join('') : '';
+    return [hint && hint.type || 'c', 'obsolete'+(hint.name ? ' '+hint.name : '')+args, undefined, undefined];
+  }
 
 
   function el(tagName, className) {
@@ -315,13 +325,10 @@ function Visual(options) {
     this.defaultArgs = info.slice(4);
     this.args = args.concat(this.defaultArgs.slice(args.length));
 
-    var category = info[3];
-    if (typeof category !== 'object') category = options.getCategory(category);
-
     this.name = info[2];
     this.type = info[0];
     this.spec = options.getText(info[1]);
-    this.color = category[2];
+    this.category = info[3];
   }
 
   var PI12 = Math.PI * 1/2;
@@ -451,6 +458,15 @@ function Visual(options) {
         }
         i++;
       }
+    }
+  });
+
+  def(Block.prototype, 'category', {
+    get: function() {return this._category},
+    set: function(value) {
+      if (typeof value !== 'object') value = options.getCategory(value);
+      this._category = value;
+      this.color = value[2];
     }
   });
 
@@ -665,9 +681,8 @@ function Visual(options) {
   };
 
   Block.prototype.copy = function() {
-    var b = new Block(this.name, this.args.map(copy));
-    if (b._type !== this._type) b.type = this._type;
-    if (b._color !== this._color) b.color = this._color;
+    var b = new Block([this._type, this._spec, this.name, this._category], this.args.map(copy));
+    if (b._color !== this._color) b.color = this.color;
     return b;
   };
 
@@ -3256,6 +3271,7 @@ function Visual(options) {
 
   return {
     util: {
+      obsoleteBlock: obsoleteBlock,
       moveTo: moveTo,
       slideTo: slideTo,
       setTransform: setTransform,
