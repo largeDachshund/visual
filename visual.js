@@ -2538,17 +2538,17 @@ function Visual(options) {
     this.shouldResize = false;
 
     if (this.pressObject && !this.dragging) {
-      if (e.button === 0) {
+      if (e.button === 2 || e.button === 0 && e.ctrlKey) {
+        this.hideMenus();
+        var cm = (this.pressObject || this).contextMenu;
+        if (cm) cm.show(this);
+        e.preventDefault();
+      } else if (e.button === 0) {
         if (this.pressObject.isResizable) {
           var pos = this.pressObject.worldPosition;
           this.shouldResize = this.pressObject.resizableAt(this.pressX - pos.x, this.pressY - pos.y);
         }
         this.shouldDrag = !this.shouldResize && this.pressObject.isDraggable && !((this.pressObject.isTextArg || this.pressObject.isComment) && e.target === this.pressObject.field);
-      } else if (e.button === 2) {
-        this.hideMenus();
-        var cm = (this.pressObject || this).contextMenu;
-        if (cm) cm.show(this);
-        e.preventDefault();
       }
     }
 
