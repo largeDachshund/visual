@@ -3183,7 +3183,7 @@ function Visual(options) {
     this.hide();
     var item = this.items[index];
     if (typeof item[1] === 'function') {
-      item[1].call(this.context);
+      item[1].call(this.context, item.length > 1 ? item[1] : item[0], item);
     } else if (typeof this.action === 'function') {
       this.action.call(this.context, item.length > 1 ? item[1] : item[0], item);
     }
