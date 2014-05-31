@@ -547,7 +547,7 @@ function Visual(options) {
       'add comment',
       Menu.line,
       ['delete', this.destroy]).translate().withContext(this);
-  }});
+  }, configurable: true});
 
   def(Block.prototype, 'dragObject', {get: function() {
     if (this.workspace.isPalette) {
@@ -1147,7 +1147,7 @@ function Visual(options) {
       return m;
     }
     return this.parent.contextMenu;
-  }});
+  }, configurable: true});
 
   def(Arg.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
