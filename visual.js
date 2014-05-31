@@ -1668,7 +1668,7 @@ function Visual(options) {
   };
 
   Script.prototype.toJSON = function() {
-    return this.parent && this.parent.isWorkspace ? [this.x, this.y, this.blocks] : this.blocks;
+    return !this.parent || this.parent.isWorkspace ? [this.x, this.y, this.blocks] : this.blocks;
   };
 
   Script.prototype.objectFromPoint = function(x, y) {
