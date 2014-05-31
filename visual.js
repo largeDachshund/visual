@@ -2068,6 +2068,17 @@ function Visual(options) {
     return this;
   };
 
+  Workspace.prototype.scrollTo = function(x, y) {
+    if (this.el === document.body) {
+      window.scrollX = x || 0;
+      window.scrollY = y || 0;
+    } else {
+      this.el.scrollLeft = x || 0;
+      this.el.scrollTop = y || 0;
+    }
+    this.scroll();
+  };
+
   Workspace.prototype.scroll = function() {
     if (this.el === document.body) {
       this.scrollX = window.scrollX;
