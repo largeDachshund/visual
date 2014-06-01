@@ -3386,6 +3386,11 @@ function Visual(options) {
 
   Menu.prototype.commit = function(index, value) {
     this.hide();
+    var input = this.els[index].querySelector('input');
+    if (input) {
+      input.click();
+      return;
+    }
     var item = this.items[index];
     this.perform(item, item.length > 1 ? item[1] : item[0]);
   };
