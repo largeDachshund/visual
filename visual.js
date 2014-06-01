@@ -3063,7 +3063,6 @@ function Visual(options) {
 
     this.selectedIndex = -1;
     this.items = [];
-    this.els = [];
 
     items = [].slice.call(arguments);
     if (typeof items[0] === 'function') {
@@ -3102,23 +3101,17 @@ function Visual(options) {
     return this;
   };
 
+  Menu.prototype.createItem = function(item) {
+    return typeof item === 'object' ? item : [item, item];
+  };
+
   Menu.prototype.add = function(item) {
-    if (item === Menu.line) {
-      if (this.items.length && this.items[this.items.length - 1] !== Menu.line) {
-        var s = el('Visual-menu-line');
-        this.items.push(item);
-        this.els.push(s);
-        this.el.appendChild(s);
-      }
-    } else if (item) {
-      if (typeof item !== 'object') item = [item, item];
-      var i = el('Visual-menu-item');
-      i.textContent = item[0];
-      i.dataset.index = this.items.length;
-      this.items.push(item);
-      this.els.push(i);
-      this.el.appendChild(i);
-    }
+    this.items.push(this.createItem(item));
+    return this;
+  };
+
+  Menu.prototype.insert = function(i, item) {
+    this.items.splice(i, 0, this.createItem(item));
     return this;
   };
 
@@ -3126,28 +3119,51 @@ function Visual(options) {
     return this.add(Menu.line);
   };
 
-  Menu.prototype.addTranslated = function(text) {
-    var item = [options.getText(text), text];
+  Menu.prototype.insertLine = function(i) {
+    return this.insert(i, Menu.line);
+  };
+
+  Menu.prototype.translateItem = function(item) {
+    if (item === Menu.line) return item;
+    item = this.createItem(item);
+    item = [options.getText(item[0]), item[1]];
     item.translated = true;
-    return this.add(item);
+    return item;
+  };
+
+  Menu.prototype.addTranslated = function(item) {
+    return this.add(this.translateItem(item));
+  };
+
+  Menu.prototype.insertTranslated = function(i, item) {
+    return this.insert(i, this.translateItem(item));
   };
 
   Menu.prototype.addAll = function(items) {
-    var length = items.length;
-    for (var i = 0; i < length; i++) {
-      this.add(items[i]);
-    }
+    this.items = this.items.concat(items.map(this.createItem, this));
     return this;
   };
 
+  Menu.prototype.insertAll = function(i, items) {
+    this.items.splice.apply(this.items, [i, 0].concat(items.map(this.createItem, this)));
+    return this;
+  };
+
+  Menu.prototype.addAllTranslated = function(items) {
+    return this.addAll(items.map(this.translateItem, this));
+  };
+
+  Menu.prototype.insertAllTranslated = function(i, items) {
+    return this.insertAll(i, items.map(this.translateItem, this));
+  };
+
   Menu.prototype.translate = function() {
-    var els = this.els;
     var items = this.items;
     for (var i = items.length; i--;) {
       var item = items[i];
       if (item !== Menu.line && !item.translated) {
+        item[0] = options.getText(item[0]);
         item.translated = true;
-        els[i].textContent = item[0] = options.getText(item[0]);
       }
     }
     return this;
@@ -3158,19 +3174,39 @@ function Visual(options) {
   };
 
   Menu.prototype.showAt = function(x, y, app) {
-    while (this.items[this.items.length-1] === Menu.line) {
-      this.items.pop();
-      this.el.removeChild(this.els.pop());
+    var items = this.items;
+    var line = true;
+    for (var i = items.length; i--;) {
+      var has = items[i] === Menu.line;
+      if (has && line) items.splice(i, 1);
+      line = has;
     }
-    if (!this.items.length) return;
+    if (line) items.shift();
+    if (!items.length) return;
+
+    var c = this.el;
+    this.els = [];
+    for (var i = 0, l = items.length; i < l; i++) {
+      var item = items[i];
+      if (item === Menu.line) {
+        var it = el('Visual-menu-line');
+      } else {
+        it = el('Visual-menu-item');
+        it.textContent = item[0];
+        it.dataset.index = i;
+      }
+      this.els.push(it);
+      c.appendChild(it);
+    }
+
     var p = this.padding;
     app.add(this);
-    var w = this.el.offsetWidth;
-    var h = this.el.offsetHeight;
-    this.el.style.width = (w+16)+'px';
-    this.el.style.height = h+'px';
-    this.el.style.maxWidth = (window.innerWidth - p * 2)+'px';
-    this.el.style.maxHeight = (window.innerHeight - p * 2)+'px';
+    var w = c.offsetWidth+16;
+    var h = c.offsetHeight;
+    c.style.width = w+'px';
+    c.style.height = h+'px';
+    c.style.maxWidth = (window.innerWidth - p * 2)+'px';
+    c.style.maxHeight = (window.innerHeight - p * 2)+'px';
     this.moveTo(Math.max(p, Math.min(window.innerWidth - w - p, x)), Math.max(p, Math.min(window.innerHeight - h - p, y)));
     this.field.focus();
   };
