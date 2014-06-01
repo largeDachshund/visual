@@ -2121,6 +2121,23 @@ function Visual(options) {
     return this.dispatch('change');
   };
 
+  Workspace.prototype.addAll = function(scripts) {
+    var f = document.createDocumentFragment();
+
+    for (var i = 0, length = scripts.length; i < length; i++) {
+      var s = scripts[i];
+      if (s.parent) s.parent.remove(s);
+      s.parent = this;
+      s.layoutChildren();
+      s.drawChildren();
+      f.appendChild(s.el);
+    }
+    this.scripts = this.scripts.concat(scripts);
+    this.el.appendChild(f);
+
+    return this.dispatch('change');
+  };
+
   Workspace.prototype.remove = function(script) {
     if (script.parent !== this) return this;
     script.parent = null;
@@ -2336,6 +2353,11 @@ function Visual(options) {
 
     this.refill();
     return this.dispatch('change');
+  };
+
+  Palette.prototype.addAll = function(scripts) {
+    scripts.forEach(this.add, this);
+    return this;
   };
 
   Palette.prototype.insert = function(script, before) {
