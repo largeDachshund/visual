@@ -145,8 +145,10 @@ body.Visual-workspace {
 
 .Visual-menu-field {
   position: fixed;
-  top: -10000px;
-  left: -10000px;
+  outline: 0;
+  opacity: 0;
+  top: -1px;
+  left: -1px;
   border: 0;
   padding: 0;
   margin: 0;
