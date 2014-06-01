@@ -59,8 +59,25 @@ function Visual(options) {
     this.value = value;
   }
 
+  function redraw() {
+    if (this.workspace) {
+      this.graphicsDirty = false;
+      this.draw();
+    } else {
+      this.graphicsDirty = true;
+    }
+  }
+
   function getEl(o) {
     return o.el;
+  }
+
+  function layoutChildren(o) {
+    o.layoutChildren();
+  }
+
+  function drawChildren(o) {
+    o.drawChildren();
   }
 
   function copy(o) {
@@ -139,6 +156,13 @@ function Visual(options) {
     if (this.dirty) {
       this.dirty = false;
       this.layoutSelf();
+    }
+  }
+
+  function drawNoChildren() {
+    if (this.graphicsDirty) {
+      this.graphicsDirty = false;
+      this.draw();
     }
   }
 
@@ -347,6 +371,7 @@ function Visual(options) {
 
   Block.prototype.parent = null;
   Block.prototype.dirty = true;
+  Block.prototype.graphicsDirty = true;
 
   Block.prototype.radius = 3;
   Block.prototype.puzzle = 3;
@@ -481,8 +506,7 @@ function Visual(options) {
     get: function() {return this._color},
     set: function(value) {
       this._color = value;
-
-      if (this.parent) this.draw();
+      this.redraw();
     }
   });
 
@@ -631,10 +655,11 @@ function Visual(options) {
     i = array.indexOf(oldPart);
     array.splice(i, 1, newPart);
 
-    this.el.replaceChild(newPart.el, oldPart.el);
-
-    if (this.parent) newPart.layoutChildren();
+    newPart.layoutChildren();
     this.layout();
+    if (this.workspace) newPart.drawChildren();
+
+    this.el.replaceChild(newPart.el, oldPart.el);
 
     return this;
   };
@@ -717,12 +742,18 @@ function Visual(options) {
   Block.prototype.layout = layout;
 
   Block.prototype.layoutChildren = function() {
-    this.parts.forEach(function(p) {
-      p.layoutChildren();
-    });
+    this.parts.forEach(layoutChildren);
     if (this.dirty) {
       this.dirty = false;
       this.layoutSelf();
+    }
+  };
+
+  Block.prototype.drawChildren = function() {
+    this.parts.forEach(drawChildren);
+    if (this.graphicsDirty) {
+      this.graphicsDirty = false;
+      this.draw();
     }
   };
 
@@ -832,7 +863,7 @@ function Visual(options) {
     this.width = Math.max(width, scriptWidth);
     this.height = height;
 
-    this.draw();
+    this.redraw();
   };
 
   Block.prototype.pathBlock = function(context) {
@@ -865,6 +896,8 @@ function Visual(options) {
       }
     });
   };
+
+  Block.prototype.redraw = redraw;
 
   Block.prototype.draw = function() {
     this.canvas.width = this.ownWidth;
@@ -925,6 +958,7 @@ function Visual(options) {
   def(Label.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
   Label.prototype.layoutSelf = function() {};
+  Label.prototype.drawChildren = function() {};
   Label.prototype.layoutChildren = layoutNoChildren;
   Label.prototype.layout = layout;
   Label.prototype.moveTo = moveTo;
@@ -944,6 +978,7 @@ function Visual(options) {
   Icon.prototype.x = 0;
   Icon.prototype.y = 0;
   Icon.prototype.dirty = true;
+  Icon.prototype.graphicsDirty = true;
 
   def(Icon.prototype, 'app', {get: getApp});
   def(Icon.prototype, 'workspace', {get: getWorkspace});
@@ -972,7 +1007,9 @@ function Visual(options) {
     }
   };
 
-  Icon.prototype.redraw = function() {
+  Icon.prototype.redraw = redraw;
+
+  Icon.prototype.draw = function() {
     this.fn(this.context);
   };
 
@@ -984,6 +1021,7 @@ function Visual(options) {
   };
 
   Icon.prototype.layoutChildren = layoutNoChildren;
+  Icon.prototype.drawChildren = drawNoChildren;
   Icon.prototype.layout = layout;
   Icon.prototype.moveTo = moveTo;
   Icon.prototype.slideTo = slideTo;
@@ -1036,6 +1074,7 @@ function Visual(options) {
   Arg.prototype.x = 0;
   Arg.prototype.y = 0;
   Arg.prototype.dirty = true;
+  Arg.prototype.graphicsDirty = true;
 
   Arg.prototype.insetColor = 'rgba(0, 0, 0, .1)';
   Arg.prototype.fieldPadding = 4;
@@ -1354,7 +1393,7 @@ function Visual(options) {
         break;
     }
 
-    this.draw();
+    this.redraw();
   };
 
   Arg.prototype.layoutChildren = function() {
@@ -1365,6 +1404,15 @@ function Visual(options) {
     }
   };
 
+  Arg.prototype.drawChildren = function() {
+    if (this._type === 't') this.script.drawChildren();
+    if (this.graphicsDirty) {
+      this.graphicsDirty = false;
+      this.draw();
+    }
+  };
+
+  Arg.prototype.redraw = redraw;
   Arg.prototype.layout = layout;
   Arg.prototype.moveTo = moveTo;
   Arg.prototype.slideTo = slideTo;
@@ -1528,9 +1576,8 @@ function Visual(options) {
       f.appendChild(b.el);
     }
 
-    script.el.appendChild(f);
-
     this.layout();
+    script.el.appendChild(f);
     return script;
   };
 
@@ -1545,11 +1592,11 @@ function Visual(options) {
     block.parent = this;
     this.blocks.push(block);
 
-    if (this.parent) block.layoutChildren();
+    block.layoutChildren();
     this.layout();
+    if (this.workspace) block.drawChildren();
 
     this.el.appendChild(block.el);
-
     return this;
   };
 
@@ -1565,13 +1612,15 @@ function Visual(options) {
     }
 
     this.blocks.push.apply(this.blocks, blocks);
-    this.el.appendChild(f);
 
+    var ws = this.workspace;
     for (var i = 0; i < length; i++) {
       blocks[i].layoutChildren();
+      if (ws) blocks[i].drawChildren();
     }
 
     this.layout();
+    this.el.appendChild(f);
     return this;
   };
 
@@ -1589,13 +1638,15 @@ function Visual(options) {
     this.blocks.push.apply(this.blocks, blocks);
 
     script.blocks = [];
-    this.el.appendChild(f);
 
+    var ws = this.workspace;
     for (var i = 0; i < length; i++) {
       blocks[i].layoutChildren();
+      if (ws) blocks[i].drawChildren();
     }
 
     this.layout();
+    this.el.appendChild(f);
   };
 
   Script.prototype.insert = function(block, beforeBlock) {
@@ -1610,11 +1661,12 @@ function Visual(options) {
     block.parent = this;
     var i = this.blocks.indexOf(beforeBlock);
     this.blocks.splice(i, 0, block);
-    this.el.insertBefore(block.el, beforeBlock.el);
+    if (this.workspace) block.drawChildren();
 
-    if (this.parent) block.layoutChildren();
+    block.layoutChildren();
     this.layout();
 
+    this.el.insertBefore(block.el, beforeBlock.el);
     return this;
   };
 
@@ -1633,17 +1685,19 @@ function Visual(options) {
     this.blocks.splice.apply(this.blocks, [i, 0].concat(blocks));
 
     script.blocks = [];
-    this.el.insertBefore(f, beforeBlock.el);
 
     if (i === 0 && this.parent && this.parent.isWorkspace) {
       this.moveTo(this.x, this.y - script.height);
     }
 
+    var ws = this.workspace;
     for (var i = 0; i < length; i++) {
-      blocks[i].layout();
+      blocks[i].layoutChildren();
+      if (ws) blocks[i].drawChildren();
     }
 
     this.layout();
+    this.el.insertBefore(f, beforeBlock.el);
   };
 
   Script.prototype.replace = function(oldBlock, newBlock) {
@@ -1654,11 +1708,12 @@ function Visual(options) {
 
     var i = this.blocks.indexOf(oldBlock);
     this.blocks.splice(i, 1, newBlock);
-    this.el.replaceChild(newBlock.el, oldBlock.el);
 
-    if (this.parent) newBlock.layoutChildren();
+    newBlock.layoutChildren();
     this.layout();
+    if (this.workspace) newBlock.drawChildren();
 
+    this.el.replaceChild(newBlock.el, oldBlock.el);
     return this;
   };
 
@@ -1705,13 +1760,15 @@ function Visual(options) {
   };
 
   Script.prototype.layoutChildren = function() {
-    this.blocks.forEach(function(b) {
-      b.layoutChildren();
-    });
+    this.blocks.forEach(layoutChildren);
     if (this.dirty) {
       this.dirty = false;
       this.layoutSelf();
     }
+  };
+
+  Script.prototype.drawChildren = function() {
+    this.blocks.forEach(drawChildren);
   };
 
   Script.prototype.layoutSelf = function() {
@@ -1896,12 +1953,18 @@ function Visual(options) {
       this.field.style.visibility = 'visible';
       this.title.style.visibility = 'hidden';
     }
-    this.canvas.width = this.ownWidth = w;
-    this.canvas.height = this.height = this.ownHeight = h;
-    this.draw(this.context);
+    this.ownWidth = w;
+    this.height = this.ownHeight = h
+    this.redraw();
   };
 
-  Comment.prototype.draw = function(context) {
+  Comment.prototype.draw = function() {
+    this.canvas.width = this.width;
+    this.canvas.height = this.height;
+    this.drawOn(this.context);
+  };
+
+  Comment.prototype.drawOn = function(context) {
     var w = this.width;
     var h = this.height;
     var th = this.titleHeight;
@@ -1979,6 +2042,8 @@ function Visual(options) {
 
   Comment.prototype.objectFromPoint = opaqueObjectFromPoint;
   Comment.prototype.layoutChildren = layoutNoChildren;
+  Comment.prototype.drawChildren = drawNoChildren;
+  Comment.prototype.redraw = redraw;
   Comment.prototype.layout = layout;
   Comment.prototype.moveTo = moveTo;
   Comment.prototype.slideTo = slideTo;
@@ -2045,6 +2110,7 @@ function Visual(options) {
 
     if (x != null) script.moveTo(x, y);
     script.layoutChildren();
+    script.drawChildren();
     this.layout();
 
     this.el.appendChild(script.el);
@@ -2242,6 +2308,7 @@ function Visual(options) {
 
       if (script.isElement) document.body.appendChild(script.el);
       script.layoutChildren();
+      script.drawChildren();
       this.lineHeight = Math.max(this.lineHeight, script.ownHeight);
       this.contentWidth = Math.max(this.contentWidth, this.cx + script.ownWidth + this.extraSpace);
       if (script.isInline) {
@@ -2279,6 +2346,7 @@ function Visual(options) {
 
     if (!script.isSpace) {
       script.layoutChildren();
+      script.drawChildren();
       this.el.appendChild(script.el);
     }
 
@@ -2377,6 +2445,7 @@ function Visual(options) {
   };
 
   PaletteElement.prototype.layoutChildren = layoutNoChildren;
+  PaletteElement.prototype.drawChildren = function() {};
   PaletteElement.prototype.layout = layout;
   PaletteElement.prototype.moveTo = moveTo;
   PaletteElement.prototype.slideTo = slideTo;
@@ -2542,6 +2611,7 @@ function Visual(options) {
     this.dragScript.parent = this;
     document.body.appendChild(this.dragScript.el);
     this.dragScript.layoutChildren();
+    this.dragScript.drawChildren();
     this.dragScript.addShadow(this.dragShadowX, this.dragShadowY, this.dragShadowBlur, this.dragShadowColor);
     this.updateFeedback();
   };
