@@ -366,7 +366,8 @@ function Visual(options) {
 
     this.name = info[2];
     this.type = info[0];
-    this.spec = options.getText(info[1]);
+    this.infoSpec = info[1];
+    this.spec = options.getText(this.infoSpec);
     this.category = info[3];
   }
 
@@ -721,7 +722,7 @@ function Visual(options) {
   };
 
   Block.prototype.copy = function() {
-    var b = new Block([this._type, this._spec, this.name, this._category], this.args.map(copy));
+    var b = new Block([this._type, this.infoSpec, this.name, this._category], this.args.map(copy));
     if (b._color !== this._color) b.color = this.color;
     return b;
   };
