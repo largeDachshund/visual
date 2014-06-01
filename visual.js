@@ -265,9 +265,17 @@ function Visual(options) {
     return containsPoint(context.canvas, x, y) && context.getImageData(x, y, 1, 1).data[3] > 0;
   }
 
-  function randColor() {
-    var s = (Math.random() * 0x1000000 | 0).toString(16);
+  function numberToColor(num) {
+    var s = num.toString(16);
     return '#'+'000000'.slice(s.length)+s;
+  }
+
+  function colorToNumber(color) {
+    return parseInt(color.slice(1), 16);
+  }
+
+  function randColor() {
+    return Math.random() * 0x1000000 | 0;
   }
 
   function setTransform(el, transform) {
@@ -1106,7 +1114,7 @@ function Visual(options) {
       }
       if (this._type !== 'm' && this._type !== 'l' && (this._type !== 'd' || !isNaN(value))) {
         this._value = value;
-        if (this.field) this.field.value = value;
+        if (this.field) this.field.value = this._type === 'c' ? numberToColor(value) : value;
         if (this.type !== 'h') this.layout();
         return;
       }
@@ -1142,8 +1150,9 @@ function Visual(options) {
         case 'c':
           this.field = el('input', 'Visual-absolute Visual-field Visual-color-field');
           this.field.type = 'color';
-          this.field.value = randColor();
-          this.field.addEventListener('input', this.draw.bind(this));
+          this._value = randColor();
+          this.field.value = numberToColor(this._value);
+          this.field.addEventListener('input', this.changeColor.bind(this));
           break;
         case 'd':
           arrow = true;
@@ -1183,6 +1192,11 @@ function Visual(options) {
       this.layout();
     }
   });
+
+  Arg.prototype.changeColor = function() {
+    this._value = colorToNumber(this.field.value);
+    this.draw();
+  };
 
   Arg.prototype.change = function() {
     this._value = this.field.value;
