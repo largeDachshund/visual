@@ -2,6 +2,7 @@ function Visual(options) {
   'use strict';
 
   var def = Object.defineProperty;
+  var slice = [].slice;
 
 
   if (!options.getBlock) {
@@ -3070,7 +3071,7 @@ function Visual(options) {
     this.selectedIndex = -1;
     this.items = [];
 
-    items = [].slice.call(arguments);
+    items = slice.call(arguments);
     if (typeof items[0] === 'function') {
       this.action = items.shift();
     }
@@ -3080,6 +3081,7 @@ function Visual(options) {
     this.cancelTyping = this.cancelTyping.bind(this);
 
     this.el.addEventListener('mouseup', this.mouseUp.bind(this), true);
+    this.change = this.change.bind(this);
     this.field.addEventListener('keydown', this.keyDown.bind(this));
     this.field.addEventListener('input', this.input.bind(this));
   }
@@ -3200,6 +3202,17 @@ function Visual(options) {
         it = el('Visual-menu-item');
         it.textContent = item[0];
         it.dataset.index = i;
+        if (item[2]) {
+          var file = item[2].file || item[2].files;
+          if (file) {
+            var input = el('input', 'Visual-menu-file');
+            if (typeof file === 'string') input.accept = file;
+            if (item[2].files) input.multiple = true;
+            input.type = 'file';
+            input.addEventListener('change', this.change);
+            it.appendChild(input);
+          }
+        }
       }
       this.els.push(it);
       c.appendChild(it);
@@ -3242,18 +3255,37 @@ function Visual(options) {
     this.els[i].classList.add('selected');
   };
 
+  Menu.prototype.change = function(e) {
+    var t = e.target;
+    while (t) {
+      if (t.parentNode === this.el && t.dataset.index) {
+        this.perform(this.items[t.dataset.index], e.target.multiple ? slice.call(e.target.files) : e.target.files[0]);
+        return;
+      }
+      t = t.parentNode;
+    }
+  };
+
   Menu.prototype.mouseUp = function(e) {
+    if (e.target.tagName === 'INPUT') {
+      setTimeout(this.hide.bind(this));
+      return;
+    }
     if (this.selectedIndex === -1) return;
     this.commit(this.selectedIndex);
   };
 
-  Menu.prototype.commit = function(index) {
+  Menu.prototype.commit = function(index, value) {
     this.hide();
     var item = this.items[index];
+    this.perform(item, item.length > 1 ? item[1] : item[0]);
+  };
+
+  Menu.prototype.perform = function(item, value) {
     if (typeof item[1] === 'function') {
-      item[1].call(this.context, item.length > 1 ? item[1] : item[0], item);
+      item[1].call(this.context, value, item);
     } else if (typeof this.action === 'function') {
-      this.action.call(this.context, item.length > 1 ? item[1] : item[0], item);
+      this.action.call(this.context, value, item);
     }
   };
 
