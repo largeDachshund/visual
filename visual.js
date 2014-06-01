@@ -818,7 +818,7 @@ function Visual(options) {
         lineX = 0;
         scriptWidth = Math.max(scriptWidth, sp + part.script.width);
         line += 2;
-      } else {
+      } else if (!part.isArg || part._type !== 'h') {
         var md = command ? 0 : this.minDistance(part);
         var mw = command ? (part.isBlock || part.isArg ? cmw : 0) : md;
         if (mw && !line && lineX < mw - xp) lineX = lineXs[line][lineXs[line].length-1] = mw - xp;
@@ -1061,6 +1061,7 @@ function Visual(options) {
     b: 'pathBooleanShape',
     c: 'pathRectShape',
     d: 'pathRoundedShape',
+    h: 'pathNoShape',
     l: 'pathNoShape',
     m: 'pathRectShape',
     n: 'pathRoundedShape',
@@ -1106,7 +1107,7 @@ function Visual(options) {
       if (this._type !== 'm' && this._type !== 'l' && (this._type !== 'd' || !isNaN(value))) {
         this._value = value;
         if (this.field) this.field.value = value;
-        this.layout();
+        if (this.type !== 'h') this.layout();
         return;
       }
       this._value = value;
@@ -1160,6 +1161,8 @@ function Visual(options) {
         case 'l':
           this.field = el('Visual-absolute Visual-label');
           break;
+        case 'h':
+          return;
         case 't':
           this.script = new Script();
           this.script.parent = this;
