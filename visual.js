@@ -42,6 +42,12 @@ function Visual(options) {
   }
 
 
+  function format(string, values) {
+    return string.replace(/\{([\w_]*)\}/, function(t, name) {
+      return values[name];
+    });
+  }
+
   function el(tagName, className) {
     var d = document.createElement(className ? tagName : 'div');
     d.className = className || tagName || '';
@@ -3307,6 +3313,7 @@ function Visual(options) {
 
   return {
     util: {
+      format: format,
       obsoleteBlock: obsoleteBlock,
       moveTo: moveTo,
       slideTo: slideTo,
