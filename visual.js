@@ -3465,7 +3465,9 @@ function Visual(options) {
       moveTo: moveTo,
       slideTo: slideTo,
       setTransform: setTransform,
-      setTransition: setTransition
+      setTransition: setTransition,
+      numberToColor: numberToColor,
+      colorToNumber: colorToNumber
     },
     options: options,
     getCategory: options.getCategory,
