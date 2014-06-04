@@ -353,6 +353,24 @@ function Visual(options) {
   }
 
 
+  var scrollbarWidth = function() {
+    var field = document.createElement('div');
+    field.style.width = '200px';
+    field.style.height = '100px';
+    field.style.overflow = 'auto';
+    field.style.opacity = 0;
+
+    var content = document.createElement('div');
+    content.style.width = '1px';
+    content.style.height = '200px';
+
+    field.appendChild(content);
+    document.body.appendChild(field);
+
+    return field.offsetWidth - field.clientWidth;
+  }();
+
+
   function Block(info, args) {
     this.el = el('Visual-absolute');
     this.el.appendChild(this.canvas = el('canvas', 'Visual-absolute'));
@@ -3463,6 +3481,7 @@ function Visual(options) {
       format: format,
       obsoleteBlock: obsoleteBlock,
       createMetrics: createMetrics,
+      scrollbarWidth: scrollbarWidth,
       moveTo: moveTo,
       slideTo: slideTo,
       setTransform: setTransform,
