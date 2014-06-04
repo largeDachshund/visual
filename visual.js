@@ -3,6 +3,7 @@ function Visual(options) {
 
   var def = Object.defineProperty;
   var slice = [].slice;
+  var hasOwnProperty = Object.prototype.hasOwnProperty;
 
 
   if (!options.getBlock) {
@@ -331,13 +332,12 @@ function Visual(options) {
     context.restore();
   }
 
-  function metrics(className) {
+  function createMetrics(className) {
     var field = el('Visual-metrics ' + className);
     var node = document.createTextNode('');
     field.appendChild(node);
     document.body.appendChild(field);
 
-    var hasOwnProperty = Object.prototype.hasOwnProperty;
     var stringCache = Object.create(null);
 
     return function measure(text) {
@@ -939,7 +939,7 @@ function Visual(options) {
     this.text = text;
   }
 
-  Label.measure = metrics('Visual-label');
+  Label.measure = createMetrics('Visual-label');
 
   Label.prototype.isLabel = true;
 
@@ -1064,7 +1064,7 @@ function Visual(options) {
     if (value != null) this.value = value;
   }
 
-  Arg.measure = metrics('Visual-field');
+  Arg.measure = createMetrics('Visual-field');
 
   Arg.prototype.pathArgType = {
     b: 'pathBooleanShape',
@@ -3462,6 +3462,7 @@ function Visual(options) {
     util: {
       format: format,
       obsoleteBlock: obsoleteBlock,
+      createMetrics: createMetrics,
       moveTo: moveTo,
       slideTo: slideTo,
       setTransform: setTransform,
