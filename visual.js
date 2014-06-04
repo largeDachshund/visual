@@ -3395,11 +3395,11 @@ function Visual(options) {
   };
 
   Menu.prototype.mouseUp = function(e) {
+    if (this.selectedIndex === -1) return;
     if (e.target.tagName === 'INPUT') {
       setTimeout(this.hide.bind(this));
       return;
     }
-    if (this.selectedIndex === -1) return;
     this.commit(this.selectedIndex);
   };
 
