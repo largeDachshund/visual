@@ -3484,6 +3484,8 @@ function Visual(options) {
       scrollbarWidth: scrollbarWidth,
       moveTo: moveTo,
       slideTo: slideTo,
+      containsPoint: containsPoint,
+      opaqueObjectFromPoint: opaqueObjectFromPoint,
       setTransform: setTransform,
       setTransition: setTransition,
       numberToColor: numberToColor,
