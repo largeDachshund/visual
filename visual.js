@@ -45,7 +45,7 @@ function Visual(options) {
 
 
   function format(string, values) {
-    return string.replace(/\{([\w_]*)\}/, function(t, name) {
+    return string.replace(/\{([\w_]*)\}/g, function(t, name) {
       return values[name];
     });
   }
