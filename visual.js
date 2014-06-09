@@ -1179,6 +1179,7 @@ function Visual(options) {
         case 'n':
         case 's':
           this.field = el('input', 'Visual-absolute Visual-field Visual-text-field');
+          if (value === 'n') this.field.addEventListener('keypress', this.keyPress.bind(this));
           this.field.addEventListener('input', this.change.bind(this));
           this.isTextArg = true;
           break;
@@ -1219,7 +1220,18 @@ function Visual(options) {
 
   Arg.prototype.change = function() {
     this._value = this.field.value;
+    if (this._type === 'n') {
+      var v = this._value.replace(/[^eE\d.-]/g, '');
+      if (v !== this._value) {
+        this.field.value = this._value = v;
+      }
+    }
     this.layout();
+  };
+
+  Arg.prototype.keyPress = function(e) {
+    if (e.charCode === 0x2d || e.charCode === 0x2e || e.charCode >= 0x30 && e.charCode <= 0x39 || e.charCode === 0x45 || e.charCode === 0x65) return;
+    e.preventDefault();
   };
 
   def(Arg.prototype, 'app', {get: getApp});
