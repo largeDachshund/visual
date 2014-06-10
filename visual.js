@@ -1179,7 +1179,7 @@ function Visual(options) {
         case 'n':
         case 's':
           this.field = el('input', 'Visual-absolute Visual-field Visual-text-field');
-          if (value === 'n') {
+          if (value === 'n' || value === 'd') {
             this.field.pattern = '[0-9]*';
             this.field.addEventListener('keypress', this.keyPress.bind(this));
           }
