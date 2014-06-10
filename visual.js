@@ -2571,14 +2571,17 @@ function Visual(options) {
     this.palettes = [];
     this.menus = [];
 
-    this.feedback = el('canvas', 'Visual-absolute Visual-feedback');
-    this.feedbackContext = this.feedback.getContext('2d');
-    this.feedback.style.display = 'none';
-    document.body.appendChild(this.feedback);
+    this.gestures = [];
+    this.feedbackPool = [];
+    this.feedback = this.createFeedback();
 
     document.addEventListener('mousedown', this.mouseDown.bind(this), true);
     document.addEventListener('mousemove', this.mouseMove.bind(this));
     document.addEventListener('mouseup', this.mouseUp.bind(this), true);
+    document.addEventListener('touchstart', this.touchStart.bind(this), true);
+    document.addEventListener('touchmove', this.touchMove.bind(this));
+    document.addEventListener('touchend', this.touchEnd.bind(this), true);
+    document.addEventListener('touchcancel', this.touchEnd.bind(this), true);
     document.addEventListener('contextmenu', this.disableContextMenu.bind(this));
   }
 
@@ -2663,31 +2666,32 @@ function Visual(options) {
     return this;
   };
 
-  App.prototype.grab = function(script, offsetX, offsetY) {
-    this.drop();
-    this.dragging = true;
+  App.prototype.grab = function(script, offsetX, offsetY, g) {
+    if (!g) g = this.createGesture(this);
+    this.drop(g);
+    g.dragging = true;
 
     if (offsetX === undefined) {
       var pos = script.worldPosition;
-      offsetX = pos.x - this.pressX;
-      offsetY = pos.y - this.pressY;
+      offsetX = pos.x - g.pressX;
+      offsetY = pos.y - g.pressY;
     }
-    this.dragX = offsetX;
-    this.dragY = offsetY;
+    g.dragX = offsetX;
+    g.dragY = offsetY;
 
     if (script.parent) {
       script.parent.remove(script);
     }
 
-    this.dragScript = script;
-    this.dragScript.el.classList.add('Visual-dragging');
-    this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
-    this.dragScript.parent = this;
-    document.body.appendChild(this.dragScript.el);
-    this.dragScript.layoutChildren();
-    this.dragScript.drawChildren();
-    this.dragScript.addShadow(this.dragShadowX, this.dragShadowY, this.dragShadowBlur, this.dragShadowColor);
-    this.updateFeedback();
+    g.dragScript = script;
+    g.dragScript.el.classList.add('Visual-dragging');
+    g.dragScript.moveTo(g.dragX + g.mouseX, g.dragY + g.mouseY);
+    g.dragScript.parent = this;
+    document.body.appendChild(g.dragScript.el);
+    g.dragScript.layoutChildren();
+    g.dragScript.drawChildren();
+    g.dragScript.addShadow(this.dragShadowX, this.dragShadowY, this.dragShadowBlur, this.dragShadowColor);
+    this.showFeedback(g);
   };
 
   App.prototype.hideMenus = function() {
@@ -2701,87 +2705,190 @@ function Visual(options) {
   };
 
   App.prototype.mouseDown = function(e) {
-    this.updateMouse(e);
+    var p = {clientX: e.clientX, clientY: e.clientY, identifier: this};
+    if (!this.startGesture(p, e)) return;
+    this.gestureDown(p, e);
+  };
 
+  App.prototype.mouseMove = function(e) {
+    var p = {clientX: e.clientX, clientY: e.clientY, identifier: this};
+    this.updateMouse(p, e);
+    this.gestureMove(p, e);
+  };
+
+  App.prototype.mouseUp = function(e) {
+    var p = {clientX: e.clientX, clientY: e.clientY, identifier: this};
+    this.updateMouse(p, e);
+    this.gestureUp(p, e);
+  };
+
+  App.prototype.touchStart = function(e) {
+    var touch = e.changedTouches[0];
+    var p = {clientX: touch.clientX, clientY: touch.clientY, identifier: touch.identifier};
+    if (!this.startGesture(p, e)) return;
+    this.gestureDown(p, e);
+    for (var i = e.changedTouches.length; i-- > 1;) {
+      touch = e.changedTouches[i];
+      this.gestureDown({clientX: touch.clientX, clientY: touch.clientY, identifier: touch.identifier}, e);
+    }
+  };
+
+  App.prototype.touchMove = function(e) {
+    var touch = e.changedTouches[0];
+    var p = {clientX: touch.clientX, clientY: touch.clientY, identifier: touch.identifier};
+    this.updateMouse(p, e);
+    this.gestureMove(p, e);
+    for (var i = e.changedTouches.length; i-- > 1;) {
+      var touch = e.changedTouches[i];
+      this.gestureMove({clientX: touch.clientX, clientY: touch.clientY, identifier: touch.identifier}, e);
+    }
+  };
+
+  App.prototype.touchEnd = function(e) {
+    var touch = e.changedTouches[0];
+    var p = {clientX: touch.clientX, clientY: touch.clientY, identifier: touch.identifier};
+    this.updateMouse(p, e);
+    this.gestureUp(p, e);
+    for (var i = e.changedTouches.length; i-- > 1;) {
+      var touch = e.changedTouches[i];
+      this.gestureUp({clientX: touch.clientX, clientY: touch.clientY, identifier: touch.identifier}, e);
+    }
+  };
+
+  App.prototype.startGesture = function(p, e) {
+    this.updateMouse(p, e);
     this.menuMouseDown(e);
 
     var pressType = this.pressType(e);
-    if (pressType !== 'workspace' && (pressType !== 'input' || e.button === 2)) return;
+    if (pressType !== 'workspace' && (pressType !== 'input' || e.button === 2)) return false;
+    if (this.dragging) {
+      this.drop();
+      return false;
+    }
+    return true;
+  };
 
-    this.pressX = this.mouseX;
-    this.pressY = this.mouseY;
-    this.pressObject = this.objectFromPoint(this.pressX, this.pressY);
-    this.shouldDrag = false;
-    this.shouldResize = false;
+  App.prototype.createFeedback = function() {
+    if (this.feedbackPool.length) {
+      return this.feedbackPool.pop();
+    }
+    var feedback = el('canvas', 'Visual-absolute Visual-feedback');
+    var feedbackContext = feedback.getContext('2d');
+    feedback.style.visibility = 'hidden';
+    document.body.appendChild(feedback);
+    return feedbackContext;
+  };
 
-    if (this.pressObject && !this.dragging) {
-      if (e.button === 2 || e.button === 0 && e.ctrlKey) {
+  App.prototype.destroyFeedback = function(feedback) {
+    if (feedback) {
+      this.feedbackPool.push(feedback);
+    }
+  };
+
+  App.prototype.createGesture = function(id) {
+    if (id === this) {
+      var g = this;
+    } else {
+      this.destroyGesture(id);
+      g = this.getGesture(id);
+    }
+    return g;
+  };
+
+  App.prototype.getGesture = function(id) {
+    if (id === this) return this;
+    var g = this.gestures[id];
+    if (g) return g;
+    return this.gestures[id] = {feedback: this.createFeedback()};
+  };
+
+  App.prototype.destroyGesture = function(id) {
+    var g = id === this ? this : this.gestures[id];
+    if (g) {
+      if (g.dragging) this.drop(g);
+      this.destroyFeedback(g.feedback);
+
+      g.pressed = false;
+      g.pressObject = null;
+      g.dragging = false;
+      g.resizing = false;
+      g.shouldDrag = false;
+      g.shouldResize = false;
+      g.dragScript = null;
+
+      delete this.gestures[id];
+    }
+  };
+
+  App.prototype.gestureDown = function(p, e) {
+    var g = this.createGesture(p.identifier);
+    g.pressX = g.mouseX = p.clientX;
+    g.pressY = g.mouseY = p.clientY;
+    g.pressObject = this.objectFromPoint(g.pressX, g.pressY);
+    g.shouldDrag = false;
+    g.shouldResize = false;
+
+    if (g.pressObject) {
+      var leftClick = e.button === 0 || e.button === undefined;
+      if (e.button === 2 || leftClick && e.ctrlKey) {
         this.hideMenus();
-        var cm = (this.pressObject || this).contextMenu;
+        var cm = (g.pressObject || this).contextMenu;
         if (cm) cm.show(this);
         e.preventDefault();
-      } else if (e.button === 0) {
-        if (this.pressObject.isResizable) {
-          var pos = this.pressObject.worldPosition;
-          this.shouldResize = this.pressObject.resizableAt(this.pressX - pos.x, this.pressY - pos.y);
+      } else if (leftClick) {
+        if (g.pressObject.isResizable) {
+          var pos = g.pressObject.worldPosition;
+          g.shouldResize = g.pressObject.resizableAt(g.pressX - pos.x, g.pressY - pos.y);
         }
-        this.shouldDrag = !this.shouldResize && this.pressObject.isDraggable && !((this.pressObject.isTextArg || this.pressObject.isComment) && e.target === this.pressObject.field);
+        g.shouldDrag = !g.shouldResize && g.pressObject.isDraggable && !((g.pressObject.isTextArg || g.pressObject.isComment) && e.target === g.pressObject.field);
       }
     }
 
-    this.drop();
-
-    if (this.shouldDrag || this.shouldResize) {
+    if (g.shouldDrag || g.shouldResize) {
       document.activeElement.blur();
       e.preventDefault();
     }
 
-    this.pressed = true;
-    this.dragging = false;
+    g.pressed = true;
+    g.dragging = false;
   };
 
-  App.prototype.mouseMove = function(e) {
-    this.updateMouse(e);
-
-    if (this.dragging) {
-      this.dragScript.moveTo(this.dragX + this.mouseX, this.dragY + this.mouseY);
-      this.updateFeedback();
+  App.prototype.gestureMove = function(p, e) {
+    var g = this.getGesture(p.identifier);
+    g.mouseX = p.clientX;
+    g.mouseY = p.clientY;
+    if (g.dragging) {
+      g.dragScript.moveTo(g.dragX + g.mouseX, g.dragY + g.mouseY);
+      this.showFeedback(g);
       e.preventDefault();
-    } else if (this.pressed && this.shouldDrag) {
-      var block = this.pressObject.dragObject;
-      this.dragWorkspace = block.workspace;
-      this.dragPos = block.workspacePosition;
-      this.dragState = block.state;
+    } else if (g.pressed && g.shouldDrag) {
+      var block = g.pressObject.dragObject;
+      g.dragWorkspace = block.workspace;
+      g.dragPos = block.workspacePosition;
+      g.dragState = block.state;
       var pos = block.worldPosition;
-      this.grab(block.detach(), pos.x - this.pressX, pos.y - this.pressY);
+      this.grab(block.detach(), pos.x - g.pressX, pos.y - g.pressY, g);
       e.preventDefault();
-    } else if (this.resizing) {
-      this.pressObject.resizeTo(Math.max(this.pressObject.minWidth, this.dragWidth + this.mouseX), Math.max(this.pressObject.minHeight, this.dragHeight + this.mouseY));
-    } else if (this.shouldResize) {
-      this.resizing = true;
-      this.dragWidth = this.pressObject.width - this.pressX;
-      this.dragHeight = this.pressObject.height - this.pressY;
+    } else if (g.resizing) {
+      g.pressObject.resizeTo(Math.max(g.pressObject.minWidth, g.dragWidth + g.mouseX), Math.max(g.pressObject.minHeight, g.dragHeight + g.mouseY));
+    } else if (g.shouldResize) {
+      g.resizing = true;
+      g.dragWidth = g.pressObject.width - g.pressX;
+      g.dragHeight = g.pressObject.height - g.pressY;
     }
   };
 
-  App.prototype.mouseUp = function(e) {
-    this.updateMouse(e);
-
-    if (this.dragging) {
-      this.drop();
-    } else if (this.resizing) {
-    } else if (this.shouldDrag || this.shouldResize) {
-      this.pressObject.click(this.pressX, this.pressY);
+  App.prototype.gestureUp = function(p, e) {
+    var g = this.getGesture(p.identifier);
+    g.mouseX = p.clientX;
+    g.mouseY = p.clientY;
+    if (g.dragging) {
+      this.drop(g);
+    } else if (g.resizing) {
+    } else if (g.shouldDrag || g.shouldResize) {
+      g.pressObject.click(g.pressX, g.pressY);
     }
-
-    this.pressed = false;
-    this.pressObject = null;
-
-    this.dragging = false;
-    this.resizing = false;
-    this.shouldDrag = false;
-    this.shouldResize = false;
-    this.dragScript = null;
+    this.destroyGesture(p.identifier);
   };
 
   App.prototype.disableContextMenu = function(e) {
@@ -2819,10 +2926,7 @@ function Visual(options) {
     this.hideMenus();
   };
 
-  App.prototype.updateMouse = function(e) {
-    this.mouseX = e.clientX;
-    this.mouseY = e.clientY;
-
+  App.prototype.updateMouse = function(p, e) {
     var menus = this.menus;
     if (menus.length) {
       for (var i = menus.length; i--;) {
@@ -2831,38 +2935,39 @@ function Visual(options) {
     }
   };
 
-  App.prototype.drop = function() {
-    if (!this.dragging) return;
+  App.prototype.drop = function(g) {
+    if (!g) g = this.getGesture(this);
+    if (!g.dragging) return;
 
-    var script = this.dragScript;
-    var workspace = this.dragWorkspace;
-    var dragPos = this.dragPos;
-    var state = this.dragState;
+    var script = g.dragScript;
+    var workspace = g.dragWorkspace;
+    var dragPos = g.dragPos;
+    var state = g.dragState;
 
-    document.body.removeChild(this.dragScript.el);
-    this.dragScript.parent = null;
-    this.dragScript.el.classList.remove('Visual-dragging');
-    this.dragScript.removeShadow();
-    this.feedback.style.display = 'none';
+    document.body.removeChild(g.dragScript.el);
+    g.dragScript.parent = null;
+    g.dragScript.el.classList.remove('Visual-dragging');
+    g.dragScript.removeShadow();
+    g.feedback.canvas.style.visibility = 'hidden';
 
     var handled = false;
-    if (this.feedbackInfo) {
-      this.applyDrop(this.feedbackInfo);
+    if (g.feedbackInfo) {
+      this.applyDrop(g);
       handled = true;
-    } else if (this.dropWorkspace) {
+    } else if (g.dropWorkspace) {
       handled = true;
-      if (this.dropWorkspace.isTarget) {
-        this.dropWorkspace.hideFeedback();
-        handled = this.dropWorkspace.drop(this.dragScript);
-      } else if (!this.dropWorkspace.isPalette) {
-        var pos = this.dropWorkspace.worldPosition;
-        this.dropWorkspace.add(this.dragX + this.mouseX - pos.x, this.dragY + this.mouseY - pos.y, script);
+      if (g.dropWorkspace.isTarget) {
+        g.dropWorkspace.hideFeedback();
+        handled = g.dropWorkspace.drop(g.dragScript);
+      } else if (!g.dropWorkspace.isPalette) {
+        var pos = g.dropWorkspace.worldPosition;
+        g.dropWorkspace.add(g.dragX + g.mouseX - pos.x, g.dragY + g.mouseY - pos.y, script);
       }
     }
     if (!handled && workspace && !workspace.isPalette) {
-      this.dragScript.el.classList.add('Visual-dragging');
-      this.dragScript.addShadow(this.dragShadowX, this.dragShadowY, this.dragShadowBlur, this.dragShadowColor);
-      document.body.appendChild(this.dragScript.el);
+      g.dragScript.el.classList.add('Visual-dragging');
+      g.dragScript.addShadow(g.dragShadowX, g.dragShadowY, g.dragShadowBlur, g.dragShadowColor);
+      document.body.appendChild(g.dragScript.el);
 
       var pos = workspace.worldPosition;
       script.slideTo(dragPos.x + pos.x, dragPos.y + pos.y, function() {
@@ -2873,32 +2978,34 @@ function Visual(options) {
       }, this);
     }
 
-    this.dragPos = null;
-    this.dragState = null;
-    this.dragWorkspace = null;
-    this.dragScript = null;
-    this.dropWorkspace = null;
-    this.feedbackInfo = null;
-    this.commandScript = null;
+    g.dragging = false;
+    g.dragPos = null;
+    g.dragState = null;
+    g.dragWorkspace = null;
+    g.dragScript = null;
+    g.dropWorkspace = null;
+    g.feedbackInfo = null;
+    g.commandScript = null;
   };
 
-  App.prototype.applyDrop = function(info) {
+  App.prototype.applyDrop = function(g) {
+    var info = g.feedbackInfo;
     switch (info.type) {
       case 'append':
-        info.script.add(this.dragScript);
+        info.script.add(g.dragScript);
         return;
       case 'insert':
-        info.script.insert(this.dragScript, info.block);
+        info.script.insert(g.dragScript, info.block);
         return;
       case 'wrap':
-        info.script.parent.add(info.script.x - this.commandScript.x, info.script.y - this.commandScript.y, this.dragScript);
-        this.commandScript.value = info.script;
+        info.script.parent.add(info.script.x - g.commandScript.x, info.script.y - g.commandScript.y, g.dragScript);
+        g.commandScript.value = info.script;
         return;
       case 'replace':
         if (info.arg.isBlock) {
           var pos = info.arg.workspacePosition;
         }
-        info.block.replace(info.arg, this.dragScript.blocks[0]);
+        info.block.replace(info.arg, g.dragScript.blocks[0]);
         if (info.arg.isBlock) {
           info.block.workspace.add(pos.x + 20, pos.y + 20, new Script().add(info.arg));
         }
@@ -2906,60 +3013,63 @@ function Visual(options) {
     }
   };
 
-  App.prototype.updateFeedback = function() {
-    this.resetFeedback();
-    if (this.dragScript.isReporter) {
-      this.showReporterFeedback();
-    } else if (this.dragScript.isScript) {
-      this.showCommandFeedback();
-    } else if (this.dragScript.isComment) {
-      this.showCommentFeedback();
+  App.prototype.showFeedback = function(g) {
+    this.resetFeedback(g);
+    if (g.dragScript.isReporter) {
+      this.updateReporterFeedback(g);
+    } else if (g.dragScript.isScript) {
+      this.updateCommandFeedback(g);
+    } else if (g.dragScript.isComment) {
+      this.updateCommentFeedback(g);
     }
-    if (this.feedbackInfo) {
-      this.renderFeedback(this.feedbackInfo);
-      this.feedback.style.display = 'block';
+    if (g.feedbackInfo) {
+      this.renderFeedback(g);
+      g.feedback.canvas.style.visibility = 'visible';
     } else {
-      this.feedback.style.display = 'none';
+      if (g.dropWorkspace && g.dropWorkspace.isTarget) {
+        g.dropWorkspace.showFeedback(g.dragScript);
+      }
+      g.feedback.canvas.style.visibility = 'hidden';
     }
   };
 
-  App.prototype.resetFeedback = function() {
-    this.feedbackDistance = Infinity;
-    this.feedbackInfo = null;
+  App.prototype.resetFeedback = function(g) {
+    g.feedbackDistance = Infinity;
+    g.feedbackInfo = null;
+    if (g.dropWorkspace && g.dropWorkspace.isTarget) {
+      g.dropWorkspace.hideFeedback();
+    }
+    g.dropWorkspace = null;
   };
 
   App.prototype.commandFeedbackRange = 70;
   App.prototype.feedbackRange = 20;
 
-  App.prototype.showCommandFeedback = function() {
-    this.commandHasHat = this.dragScript.hasHat;
-    this.commandHasFinal = this.dragScript.hasFinal;
-    this.commandScript = null;
-    var args = this.dragScript.blocks[0].args;
+  App.prototype.updateCommandFeedback = function(g) {
+    g.commandHasHat = g.dragScript.hasHat;
+    g.commandHasFinal = g.dragScript.hasFinal;
+    g.commandScript = null;
+    var args = g.dragScript.blocks[0].args;
     var length = args.length;
     for (var i = 0; i < length; i++) {
       if (args[i]._type === 't') {
-        if (!args[i].script.blocks.length) this.commandScript = args[i];
+        if (!args[i].script.blocks.length) g.commandScript = args[i];
         break;
       }
     }
-    this.showFeedback(this.addScriptCommandFeedback);
+    this.updateFeedback(g, this.addScriptCommandFeedback);
   };
 
-  App.prototype.showReporterFeedback = function() {
-    this.showFeedback(this.addScriptReporterFeedback);
+  App.prototype.updateReporterFeedback = function(g) {
+    this.updateFeedback(g, this.addScriptReporterFeedback);
   };
 
-  App.prototype.showCommentFeedback = function() {
-    this.showFeedback(function() {});
+  App.prototype.updateCommentFeedback = function(g) {
+    this.updateFeedback(g, function() {});
   };
 
-  App.prototype.showFeedback = function(p) {
+  App.prototype.updateFeedback = function(g, p) {
     var workspaces = this.workspaces;
-    if (this.dropWorkspace && this.dropWorkspace.isTarget) {
-      this.dropWorkspace.hideFeedback();
-    }
-    this.dropWorkspace = null;
     for (var i = workspaces.length; i--;) {
       var ws = workspaces[i];
       var pos = ws.worldPosition;
@@ -2969,30 +3079,27 @@ function Visual(options) {
         var w = ws.width;
         var h = ws.height;
       }
-      if (ws.el === document.body || this.mouseX >= x && this.mouseX < x + w && this.mouseY >= y && this.mouseY < y + h) {
-        if (ws.isTarget) {
-          if (!ws.acceptsDropOf(this.dragScript)) continue;
-          ws.showFeedback(this.dragScript);
-        }
-        this.dropWorkspace = ws;
+      if (ws.el === document.body || g.mouseX >= x && g.mouseX < x + w && g.mouseY >= y && g.mouseY < y + h) {
+        if (ws.isTarget && !ws.acceptsDropOf(g.dragScript)) continue;
+        g.dropWorkspace = ws;
         if (ws.isPalette || ws.isTarget) return;
 
         var scripts = ws.scripts;
         var l = scripts.length;
         for (var j = 0; j < l; j++) {
-          p.call(this, pos.x, pos.y, scripts[j]);
+          p.call(this, g, pos.x, pos.y, scripts[j]);
         }
         return;
       }
     }
   };
 
-  App.prototype.addScriptCommandFeedback = function(x, y, script) {
+  App.prototype.addScriptCommandFeedback = function(g, x, y, script) {
     if (!script.isScript) return;
     x += script.x;
     y += script.y;
-    if (!script.hasFinal && !script.isReporter && !this.commandHasHat) {
-      this.addFeedback({
+    if (!script.hasFinal && !script.isReporter && !g.commandHasHat) {
+      this.addFeedback(g, {
         x: x,
         y: y + script.height,
         feedbackY: y + script.height,
@@ -3002,10 +3109,10 @@ function Visual(options) {
         script: script
       });
     }
-    if (this.commandScript && script.parent.isWorkspace && !script.hasHat && !script.isReporter) {
-      this.addFeedback({
+    if (g.commandScript && script.parent.isWorkspace && !script.hasHat && !script.isReporter) {
+      this.addFeedback(g, {
         x: x,
-        y: y - this.commandScript.y,
+        y: y - g.commandScript.y,
         feedbackY: y,
         rangeX: this.commandFeedbackRange,
         rangeY: this.feedbackRange,
@@ -3016,11 +3123,11 @@ function Visual(options) {
     var blocks = script.blocks;
     var length = blocks.length;
     for (var i = 0; i < length; i++) {
-      this.addBlockCommandFeedback(x, y, blocks[i], i === 0);
+      this.addBlockCommandFeedback(g, x, y, blocks[i], i === 0);
     }
   };
 
-  App.prototype.addBlockCommandFeedback = function(x, y, block, isTop) {
+  App.prototype.addBlockCommandFeedback = function(g, x, y, block, isTop) {
     y += block.y;
     x += block.x;
     var args = block.args;
@@ -3028,15 +3135,15 @@ function Visual(options) {
     for (var i = 0; i < length; i++) {
       var a = args[i];
       if (a.isBlock) {
-        this.addBlockCommandFeedback(x, y, a);
-      } else if (a._type === 't' && !this.commandHasHat) {
-        this.addScriptCommandFeedback(x + a.x, y + a.y, a.script);
+        this.addBlockCommandFeedback(g, x, y, a);
+      } else if (a._type === 't' && !g.commandHasHat) {
+        this.addScriptCommandFeedback(g, x + a.x, y + a.y, a.script);
       }
     }
-    if (isTop && block.isHat || !isTop && this.commandHasHat || this.commandHasFinal || block.isReporter) return;
-    this.addFeedback({
+    if (isTop && block.isHat || !isTop && g.commandHasHat || g.commandHasFinal || block.isReporter) return;
+    this.addFeedback(g, {
       x: x,
-      y: isTop && block.parent.parent.isWorkspace ? y - this.dragScript.height : y,
+      y: isTop && block.parent.parent.isWorkspace ? y - g.dragScript.height : y,
       feedbackY: y,
       rangeX: this.commandFeedbackRange,
       rangeY: this.feedbackRange,
@@ -3046,18 +3153,18 @@ function Visual(options) {
     });
   };
 
-  App.prototype.addScriptReporterFeedback = function(x, y, script) {
+  App.prototype.addScriptReporterFeedback = function(g, x, y, script) {
     if (!script.isScript) return;
     x += script.x;
     y += script.y;
     var blocks = script.blocks;
     var length = blocks.length;
     for (var i = 0; i < length; i++) {
-      this.addBlockReporterFeedback(x, y, blocks[i]);
+      this.addBlockReporterFeedback(g, x, y, blocks[i]);
     }
   };
 
-  App.prototype.addBlockReporterFeedback = function(x, y, block) {
+  App.prototype.addBlockReporterFeedback = function(g, x, y, block) {
     x += block.x;
     y += block.y;
     var args = block.args;
@@ -3067,14 +3174,14 @@ function Visual(options) {
       var ax = x + a.x;
       var ay = y + a.y;
       if (a._type === 't') {
-        this.addScriptReporterFeedback(ax, ay, a.script);
+        this.addScriptReporterFeedback(g, ax, ay, a.script);
       } else {
         if (a.isBlock) {
-          this.addBlockReporterFeedback(x, y, a);
+          this.addBlockReporterFeedback(g, x, y, a);
         }
       }
-      if (a.acceptsDropOf(this.dragScript.blocks[0])) {
-        this.addFeedback({
+      if (a.acceptsDropOf(g.dragScript.blocks[0])) {
+        this.addFeedback(g, {
           x: ax,
           y: ay,
           rangeX: this.feedbackRange,
@@ -3087,21 +3194,22 @@ function Visual(options) {
     }
   };
 
-  App.prototype.addFeedback = function(obj) {
-    var dx = obj.x - this.dragScript.x;
-    var dy = obj.y - this.dragScript.y;
+  App.prototype.addFeedback = function(g, obj) {
+    var dx = obj.x - g.dragScript.x;
+    var dy = obj.y - g.dragScript.y;
     var d2 = dx * dx + dy * dy;
-    if (Math.abs(dx) > obj.rangeX || Math.abs(dy) > obj.rangeY || d2 > this.feedbackDistance) return;
-    this.feedbackDistance = d2;
-    this.feedbackInfo = obj;
+    if (Math.abs(dx) > obj.rangeX || Math.abs(dy) > obj.rangeY || d2 > g.feedbackDistance) return;
+    g.feedbackDistance = d2;
+    g.feedbackInfo = obj;
   };
 
   App.prototype.feedbackLineWidth = 6;
 
-  App.prototype.renderFeedback = function(info) {
-    var canvas = this.feedback;
-    var context = this.feedbackContext;
-    var b = this.dragScript.blocks[0];
+  App.prototype.renderFeedback = function(g) {
+    var info = g.feedbackInfo
+    var context = g.feedback;
+    var canvas = g.feedback.canvas;
+    var b = g.dragScript.blocks[0];
     var l = this.feedbackLineWidth;
     var r = l/2;
 
@@ -3112,7 +3220,7 @@ function Visual(options) {
     switch (info.type) {
       case 'wrap':
         setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.feedbackY - r)+'px)');
-        var w = b.ownWidth - this.commandScript.x + l;
+        var w = b.ownWidth - g.commandScript.x + l;
         var h = info.script.height + l;
         canvas.width = w;
         canvas.height = h + p;
