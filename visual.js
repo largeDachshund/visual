@@ -1179,7 +1179,10 @@ function Visual(options) {
         case 'n':
         case 's':
           this.field = el('input', 'Visual-absolute Visual-field Visual-text-field');
-          if (value === 'n') this.field.addEventListener('keypress', this.keyPress.bind(this));
+          if (value === 'n') {
+            this.field.pattern = '[0-9]*';
+            this.field.addEventListener('keypress', this.keyPress.bind(this));
+          }
           this.field.addEventListener('input', this.change.bind(this));
           this.isTextArg = true;
           break;
