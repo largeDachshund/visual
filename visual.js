@@ -1969,6 +1969,10 @@ function Visual(options) {
     return new Comment(this.text, this.width, this.fullHeight, this.collapse);
   };
 
+  Comment.prototype.toJSON = function() {
+    return [this.x, this.y, this.width, this.fullHeight, !this.collapse, -1, this.text];
+  };
+
   Comment.prototype.resizableAt = function(x, y) {
     return x >= this.width - this.resizerSize - 2 && y >= this.height - this.resizerSize - 2;
   };
