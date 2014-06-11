@@ -175,7 +175,13 @@ function Visual(options) {
     if (this.x === x && this.y === y) return;
     this.x = x;
     this.y = y;
-    setTransform(this.el, 'translate('+x+'px,'+y+'px)');
+    setTransform(this.el, (this.transform || '')+' translate('+x+'px,'+y+'px)');
+    return this;
+  }
+
+  function useTransform(transform) {
+    this.transform = transform;
+    setTransform(this.el, (this.transform || '')+' translate('+x+'px,'+y+'px)');
     return this;
   }
 
@@ -247,6 +253,8 @@ function Visual(options) {
       o = o.parent;
     }
     if (o) {
+      x *= o._scale;
+      y *= o._scale;
       var bb = o.el.getBoundingClientRect();
       x += Math.round(bb.left);
       y += Math.round(bb.top);
@@ -295,7 +303,8 @@ function Visual(options) {
     el.style.transition = transition;
   }
 
-  function bezel(context, path, thisArg, inset) {
+  function bezel(context, path, thisArg, inset, scale) {
+    if (scale == null) scale = 1;
     var s = inset ? -1 : 1;
     var w = context.canvas.width;
     var h = context.canvas.height;
@@ -317,15 +326,15 @@ function Visual(options) {
 
     context.globalCompositeOperation = 'source-atop';
 
-    context.shadowOffsetX = 10000 + s * -1;
-    context.shadowOffsetY = 10000 + s * -1;
-    context.shadowBlur = 1.5;
+    context.shadowOffsetX = (10000 + s * -1) * scale;
+    context.shadowOffsetY = (10000 + s * -1) * scale;
+    context.shadowBlur = 1.5 * scale;
     context.shadowColor = 'rgba(0, 0, 0, .4)';
     context.fill();
 
-    context.shadowOffsetX = 10000 + s * 1;
-    context.shadowOffsetY = 10000 + s * 1;
-    context.shadowBlur = 1.5;
+    context.shadowOffsetX = (10000 + s * 1) * scale;
+    context.shadowOffsetY = (10000 + s * 1) * scale;
+    context.shadowBlur = 1.5 * scale;
     context.shadowColor = 'rgba(255, 255, 255, .3)';
     context.fill();
 
@@ -397,6 +406,7 @@ function Visual(options) {
   Block.prototype.isDraggable = true;
 
   Block.prototype.parent = null;
+  Block.prototype._scale = 1;
   Block.prototype.dirty = true;
   Block.prototype.graphicsDirty = true;
 
@@ -742,6 +752,7 @@ function Visual(options) {
   Block.prototype.copy = function() {
     var b = new Block([this._type, this.infoSpec, this.name, this._category], this.args.map(copy));
     if (b._color !== this._color) b.color = this.color;
+    b.setScale(this._scale);
     return b;
   };
 
@@ -761,11 +772,12 @@ function Visual(options) {
       var o = arg.objectFromPoint(x - arg.x, y - arg.y);
       if (o) return o;
     }
-    return transparentAt(this.context, x, y) ? this : null;
+    return transparentAt(this.context, x * this._scale, y * this._scale) ? this : null;
   };
 
   Block.prototype.moveTo = moveTo;
   Block.prototype.slideTo = slideTo;
+  Block.prototype.useTransform = useTransform;
   Block.prototype.layout = layout;
 
   Block.prototype.layoutChildren = function() {
@@ -924,18 +936,29 @@ function Visual(options) {
     });
   };
 
+  Block.prototype.setScale = function(value) {
+    if (this._scale === value) return;
+    this._scale = value;
+    setTransform(this.canvas, 'scale('+1/value+')');
+    this.parts.forEach(function(p) {
+      if (p.setScale) p.setScale(value);
+    });
+    this.redraw();
+  };
+
   Block.prototype.redraw = redraw;
 
   Block.prototype.draw = function() {
-    this.canvas.width = this.ownWidth;
-    this.canvas.height = this.ownHeight;
+    this.canvas.width = this.ownWidth * this._scale;
+    this.canvas.height = this.ownHeight * this._scale;
 
+    this.context.scale(this._scale, this._scale);
     this.drawOn(this.context);
   };
 
   Block.prototype.drawOn = function(context) {
     context.fillStyle = this._color;
-    bezel(context, this.pathBlock, this);
+    bezel(context, this.pathBlock, this, false, this._scale);
   };
 
   Block.prototype.pathShadowOn = function(context) {
@@ -993,15 +1016,18 @@ function Visual(options) {
 
 
   function Icon(name) {
-    this.el = el('canvas', 'Visual-absolute');
-    this.context = this.el.getContext('2d');
+    this.el = el('Visual-absolute');
+    this.el.appendChild(this.canvas = el('canvas', 'Visual-absolute'));
+    this.context = this.canvas.getContext('2d');
     this.name = name;
-    this.fn = this.icons[name] || this.icons.empty;
+    this.info = this.icons[name] || this.icons.empty;
+    this.fn = this.info.draw;
   }
 
   Icon.prototype.isIcon = true;
 
   Icon.prototype.parent = null;
+  Icon.prototype._scale = 1;
   Icon.prototype.x = 0;
   Icon.prototype.y = 0;
   Icon.prototype.dirty = true;
@@ -1015,36 +1041,47 @@ function Visual(options) {
   def(Icon.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
   Icon.prototype.icons = {
-    loop: function(context) {
-      context.canvas.width = 14;
-      context.canvas.height = 11;
+    loop: {
+      width: 14,
+      height: 11,
+      draw: function(context) {
+        this.pathLoopArrow(context);
+        context.fillStyle = 'rgba(0, 0, 0, .3)';
+        context.fill();
 
-      this.pathLoopArrow(context);
-      context.fillStyle = 'rgba(0, 0, 0, .3)';
-      context.fill();
-
-      context.translate(-1, -1);
-      this.pathLoopArrow(context);
-      context.fillStyle = 'rgba(255, 255, 255, .9)';
-      context.fill();
+        context.translate(-1, -1);
+        this.pathLoopArrow(context);
+        context.fillStyle = 'rgba(255, 255, 255, .9)';
+        context.fill();
+      }
     },
-    empty: function(context) {
-      context.canvas.width = 0;
-      context.canvas.height = 0;
+    empty: {
+      width: 0,
+      height: 0,
+      draw: function(context) {}
     }
   };
 
   Icon.prototype.redraw = redraw;
 
   Icon.prototype.draw = function() {
+    this.canvas.width = this.width * this._scale;
+    this.canvas.height = this.height * this._scale;
+    this.context.scale(this._scale, this._scale);
     this.fn(this.context);
   };
 
   Icon.prototype.layoutSelf = function() {
-    this.fn(this.context);
+    this.width = this.info.width;
+    this.height = this.info.height;
+    this.redraw();
+  };
 
-    this.width = this.el.width;
-    this.height = this.el.height;
+  Icon.prototype.setScale = function(value) {
+    if (this._scale === value) return;
+    this._scale = value;
+    setTransform(this.canvas, 'scale('+1/value+')');
+    this.redraw();
   };
 
   Icon.prototype.layoutChildren = layoutNoChildren;
@@ -1099,6 +1136,7 @@ function Visual(options) {
   Arg.prototype.isDraggable = true;
 
   Arg.prototype.parent = null;
+  Arg.prototype._scale = 1;
   Arg.prototype.x = 0;
   Arg.prototype.y = 0;
   Arg.prototype.dirty = true;
@@ -1270,11 +1308,11 @@ function Visual(options) {
     if (this._type === 'd') {
       var pos = this.worldPosition;
     }
-    if (this._type === 'm' || this._type === 'd' && x >= pos.x + this.arrowX) {
+    if (this._type === 'm' || this._type === 'd' && x >= pos.x + this.arrowX*this._scale) {
       var menu = options.getMenu(this);
       if (menu) {
         pos = pos || this.worldPosition;
-        menu.withAction(setValue, this).showAt(pos.x, pos.y + this.height, this.app);
+        menu.withAction(setValue, this).showAt(pos.x, pos.y + this.height * this._scale, this.app);
       }
     } else if (this.isTextArg) {
       this.field.setSelectionRange(0, this.field.value.length);
@@ -1287,7 +1325,9 @@ function Visual(options) {
 
   Arg.prototype.copy = function() {
     var value = this.type === 't' ? this.script.copy() : this.value;
-    return new Arg([this.type, this.menu], value);
+    var arg = new Arg([this.type, this.menu], value);
+    arg.setScale(this._scale);
+    return arg;
   };
 
   Arg.prototype.toJSON = function() {
@@ -1300,13 +1340,14 @@ function Visual(options) {
       case 'l': return containsPoint(this, x, y) ? this : null;
       case 't': return this.script.objectFromPoint(x, y);
     }
-    return transparentAt(this.context, x, y) ? this : null;
+    return transparentAt(this.context, x * this._scale, y * this._scale) ? this : null;
   };
 
   Arg.prototype.draw = function() {
-    this.canvas.width = this.width;
-    this.canvas.height = this.height;
+    this.canvas.width = this.width * this._scale;
+    this.canvas.height = this.height * this._scale;
 
+    this.context.scale(this._scale, this._scale);
     this.drawOn(this.context);
   };
 
@@ -1318,7 +1359,7 @@ function Visual(options) {
     context.fillStyle =
       field ? '#fff' :
       this._type === 'c' ? this.field.value : this.color;
-    bezel(context, this.pathFn, this, true);
+    bezel(context, this.pathFn, this, true, this._scale);
   };
 
   Arg.prototype.pathShadowOn = function(context) {
@@ -1369,9 +1410,11 @@ function Visual(options) {
 
   Arg.prototype.pathNoShape = function(context) {};
 
+  Arg.prototype.arrowWidth = 7;
+  Arg.prototype.arrowHeight = 4;
   Arg.prototype.drawArrow = function() {
-    var w = 7;
-    var h = 4;
+    var w = this.arrowWidth * this._scale;
+    var h = this.arrowHeight * this._scale;
     var canvas = this.arrow;
     canvas.width = w;
     canvas.height = h;
@@ -1406,7 +1449,7 @@ function Visual(options) {
         var metrics = Arg.measure(this._type === 'm' ? this.field.textContent : this.field.value);
         var w = Math.max(6, metrics.width) + this.fieldPadding * 2;
         if (this.arrow) {
-          this.width = w + this.arrow.width + 1;
+          this.width = w + this.arrowWidth + 1;
           w -= this.fieldPadding - 2;
         } else {
           this.width = w;
@@ -1416,9 +1459,9 @@ function Visual(options) {
         this.field.style.height = this.height + 'px';
         // this.field.style.lineHeight = this.height + 'px';
         if (this.arrow) {
-          this.arrowX = this.width - this.arrow.width - 3;
-          this.arrowY = (this.height - this.arrow.height) / 2 | 0;
-          setTransform(this.arrow, 'translate('+this.arrowX+'px, '+this.arrowY+'px)');
+          this.arrowX = this.width - this.arrowWidth - 3;
+          this.arrowY = (this.height - this.arrowHeight) / 2 | 0;
+          setTransform(this.arrow, 'translate('+this.arrowX+'px, '+this.arrowY+'px) scale('+1/this._scale+')');
         }
         break;
       case 'l':
@@ -1445,6 +1488,18 @@ function Visual(options) {
     }
 
     this.redraw();
+  };
+
+  Arg.prototype.setScale = function(value) {
+    if (this._scale === value) return;
+    this._scale = value;
+    setTransform(this.canvas, 'scale('+1/value+')');
+    if (this.script) this.script.setScale(value);
+    this.redraw();
+    if (this.arrow) {
+      this.drawArrow();
+      setTransform(this.arrow, 'translate('+this.arrowX+'px, '+this.arrowY+'px) scale('+1/this._scale+')');
+    }
   };
 
   Arg.prototype.layoutChildren = function() {
@@ -1487,6 +1542,7 @@ function Visual(options) {
   Script.prototype.isScript = true;
 
   Script.prototype.parent = null;
+  Script.prototype._scale = 1;
   Script.prototype.dirty = true;
 
   def(Script.prototype, 'app', {get: getApp});
@@ -1784,6 +1840,7 @@ function Visual(options) {
     var script = new Script();
     script.moveTo(this.x, this.y);
     script.addScript({blocks: this.blocks.map(copy)});
+    script.setScale(this._scale);
     return script;
   };
 
@@ -1844,6 +1901,14 @@ function Visual(options) {
       var effect = this.effects[i];
       this.el.replaceChild(this.effects[i] = this.effectFns[i].call(this), effect);
     }
+  };
+
+  Script.prototype.setScale = function(value) {
+    if (this._scale === value) return;
+    this._scale = value;
+    this.blocks.forEach(function(b) {
+      b.setScale(value);
+    });
   };
 
   Script.prototype.layout = layout;
@@ -2109,6 +2174,7 @@ function Visual(options) {
     this.el.className += ' Visual-workspace Visual-no-select';
 
     this.el.appendChild(this.fill = el('Visual-absolute'));
+    this.el.appendChild(this.elContents = el('Visual-absolute'));
 
     this.scripts = [];
 
@@ -2126,6 +2192,7 @@ function Visual(options) {
 
   Workspace.prototype.isWorkspace = true;
 
+  Workspace.prototype._scale = 1;
   Workspace.prototype.parent = null;
   Workspace.prototype.scrollX = 0;
   Workspace.prototype.scrollY = 0;
@@ -2160,6 +2227,7 @@ function Visual(options) {
     }
     if (script.parent) script.parent.remove(script);
 
+    script.setScale(this._scale);
     script.parent = this;
     this.scripts.push(script);
 
@@ -2168,7 +2236,7 @@ function Visual(options) {
     script.drawChildren();
     this.layout();
 
-    this.el.appendChild(script.el);
+    this.elContents.appendChild(script.el);
 
     return this.dispatch('change');
   };
@@ -2179,13 +2247,14 @@ function Visual(options) {
     for (var i = 0, length = scripts.length; i < length; i++) {
       var s = scripts[i];
       if (s.parent) s.parent.remove(s);
+      s.setScale(this._scale);
       s.parent = this;
       s.layoutChildren();
       s.drawChildren();
       f.appendChild(s.el);
     }
     this.scripts = this.scripts.concat(scripts);
-    this.el.appendChild(f);
+    this.elContents.appendChild(f);
 
     return this.dispatch('change');
   };
@@ -2196,7 +2265,7 @@ function Visual(options) {
 
     var i = this.scripts.indexOf(script);
     this.scripts.splice(i, 1);
-    this.el.removeChild(script.el);
+    this.elContents.removeChild(script.el);
     this.layout();
 
     return this.dispatch('change');
@@ -2206,7 +2275,7 @@ function Visual(options) {
     var scripts = this.scripts;
     for (var i = scripts.length; i--;) {
       var s = scripts[i];
-      if (!s.isSpace) this.el.removeChild(s.el);
+      if (!s.isSpace) this.elContents.removeChild(s.el);
       s.parent = null;
     }
     this.scripts = [];
@@ -2217,7 +2286,11 @@ function Visual(options) {
   };
 
   Workspace.prototype.objectFromPoint = function(x, y) {
-    if (x < this.scrollX || y < this.scrollY || x > this.scrollX + this.width || y > this.scrollY + this.height) return null;
+    x /= this._scale;
+    y /= this._scale;
+    var sx = this.scrollX / this._scale;
+    var sy = this.scrollY / this._scale;
+    if (x < sx || y < sy || x >= sx + this.width / this.scale || y >= sy + this.height / this.scale) return null;
     var scripts = this.scripts;
     for (var i = scripts.length; i--;) {
       var script = scripts[i];
@@ -2294,6 +2367,15 @@ function Visual(options) {
     this.refill();
   };
 
+  Workspace.prototype.setScale = function(value) {
+    if (this._scale === value) return;
+    this._scale = value;
+    setTransform(this.elContents, 'scale('+value+')');
+    this.scripts.forEach(function(s) {
+      if (s.setScale) s.setScale(value);
+    });
+  };
+
   Workspace.prototype.resize = function() {
     this.width = this.el.offsetWidth;
     this.height = this.el.offsetHeight;
@@ -2304,8 +2386,8 @@ function Visual(options) {
     var vw = this.width + this.scrollX + this.extraSpace;
     var vh = this.height + this.scrollY + this.extraSpace;
 
-    this.fill.style.width = Math.max(this.contentWidth, vw) + 'px';
-    this.fill.style.height = Math.max(this.contentHeight, vh) + 'px';
+    this.fill.style.width = Math.max(this.contentWidth, vw) * this._scale + 'px';
+    this.fill.style.height = Math.max(this.contentHeight, vh) * this._scale + 'px';
   };
 
   Workspace.prototype.cleanUp = function() {
@@ -2369,6 +2451,7 @@ function Visual(options) {
   Palette.prototype.add = function(script) {
     if (script.parent) script.parent.remove(script);
 
+    if (!script.isSpace) script.setScale(this._scale);
     this.scripts.push(script);
     script.parent = this;
 
@@ -2393,7 +2476,7 @@ function Visual(options) {
         }
         this.cy += this.lineHeight + this.spacing;
       }
-      this.el.appendChild(script.el);
+      this.elContents.appendChild(script.el);
     }
 
     if (!script.isInline) {
@@ -2419,12 +2502,13 @@ function Visual(options) {
 
     var i = this.scripts.indexOf(before);
     this.scripts.splice(i, 0, script);
+    if (!script.isSpace) script.setScale(this._scale);
     script.parent = this;
 
     if (!script.isSpace) {
       script.layoutChildren();
       script.drawChildren();
-      this.el.appendChild(script.el);
+      this.elContents.appendChild(script.el);
     }
 
     this.layout();
@@ -2441,8 +2525,8 @@ function Visual(options) {
   };
 
   Palette.prototype.refill = function() {
-    this.fill.style.width = this.contentWidth + 'px';
-    this.fill.style.height = this.contentHeight + 'px';
+    this.fill.style.width = this.contentWidth * this._scale + 'px';
+    this.fill.style.height = this.contentHeight * this._scale + 'px';
   };
 
   Palette.prototype.layout = function() {
@@ -2510,6 +2594,7 @@ function Visual(options) {
   PaletteElement.prototype.isElement = true;
 
   PaletteElement.prototype.parent = null;
+  PaletteElement.prototype._scale = null;
   PaletteElement.prototype.x = 0;
   PaletteElement.prototype.y = 0;
   PaletteElement.prototype.dirty = true;
@@ -2520,6 +2605,8 @@ function Visual(options) {
     this.width = this.ownWidth = this.content.offsetWidth;
     this.height = this.ownHeight = this.content.offsetHeight;
   };
+
+  PaletteElement.prototype.setScale = function() {}
 
   PaletteElement.prototype.layoutChildren = layoutNoChildren;
   PaletteElement.prototype.drawChildren = function() {};
@@ -2567,6 +2654,8 @@ function Visual(options) {
     return true;
   };
 
+  Target.prototype.setScale = function() {};
+
 
   function App() {
     this.children = [];
@@ -2577,6 +2666,8 @@ function Visual(options) {
     this.gestures = [];
     this.feedbackPool = [];
     this.feedback = this.createFeedback();
+
+    document.body.appendChild(this.elScripts = el('Visual-absolute Visual-dragging'));
 
     document.addEventListener('mousedown', this.mouseDown.bind(this), true);
     document.addEventListener('mousemove', this.mouseMove.bind(this));
@@ -2591,6 +2682,7 @@ function Visual(options) {
   App.prototype.isApp = true;
 
   App.prototype.parent = null;
+  App.prototype._blockScale = 1;
 
   App.prototype.dragShadowX = 6; // NS
   App.prototype.dragShadowY = 6;
@@ -2602,6 +2694,17 @@ function Visual(options) {
   // App.prototype.dragShadowColor = 'rgba(0, 0, 0, .4)';
 
   def(App.prototype, 'app', {get: function() {return this}});
+
+  def(App.prototype, 'blockScale', {
+    get: function() {return this._blockScale},
+    set: function(value) {
+      this._blockScale = value;
+      setTransform(this.elScripts, 'scale('+value+')');
+      this.workspaces.forEach(function(s) {
+        s.setScale(value);
+      });
+    }
+  });
 
   App.prototype.objectFromPoint = function(x, y) {
     var workspaces = this.workspaces;
@@ -2631,6 +2734,7 @@ function Visual(options) {
     }
     if (thing.isWorkspace) {
       this.workspaces.push(thing);
+      thing.setScale(this._blockScale);
     }
     if (thing.isMenu) {
       this.menus.push(thing);
@@ -2687,10 +2791,9 @@ function Visual(options) {
     }
 
     g.dragScript = script;
-    g.dragScript.el.classList.add('Visual-dragging');
-    g.dragScript.moveTo(g.dragX + g.mouseX, g.dragY + g.mouseY);
+      g.dragScript.moveTo((g.dragX + g.mouseX) / this._blockScale, (g.dragY + g.mouseY) / this._blockScale);
     g.dragScript.parent = this;
-    document.body.appendChild(g.dragScript.el);
+    this.elScripts.appendChild(g.dragScript.el);
     g.dragScript.layoutChildren();
     g.dragScript.drawChildren();
     g.dragScript.addShadow(this.dragShadowX, this.dragShadowY, this.dragShadowBlur, this.dragShadowColor);
@@ -2861,7 +2964,7 @@ function Visual(options) {
     g.mouseX = p.clientX;
     g.mouseY = p.clientY;
     if (g.dragging) {
-      g.dragScript.moveTo(g.dragX + g.mouseX, g.dragY + g.mouseY);
+      g.dragScript.moveTo((g.dragX + g.mouseX) / this._blockScale, (g.dragY + g.mouseY) / this._blockScale);
       this.showFeedback(g);
       e.preventDefault();
     } else if (g.pressed && g.shouldDrag) {
@@ -2947,9 +3050,8 @@ function Visual(options) {
     var dragPos = g.dragPos;
     var state = g.dragState;
 
-    document.body.removeChild(g.dragScript.el);
+    this.elScripts.removeChild(g.dragScript.el);
     g.dragScript.parent = null;
-    g.dragScript.el.classList.remove('Visual-dragging');
     g.dragScript.removeShadow();
     g.feedback.canvas.style.visibility = 'hidden';
 
@@ -2964,18 +3066,16 @@ function Visual(options) {
         handled = g.dropWorkspace.drop(g.dragScript);
       } else if (!g.dropWorkspace.isPalette) {
         var pos = g.dropWorkspace.worldPosition;
-        g.dropWorkspace.add(g.dragX + g.mouseX - pos.x, g.dragY + g.mouseY - pos.y, script);
+        g.dropWorkspace.add((g.dragX + g.mouseX - pos.x) / this._blockScale, (g.dragY + g.mouseY - pos.y) / this._blockScale, script);
       }
     }
     if (!handled && workspace && !workspace.isPalette) {
-      g.dragScript.el.classList.add('Visual-dragging');
       g.dragScript.addShadow(g.dragShadowX, g.dragShadowY, g.dragShadowBlur, g.dragShadowColor);
-      document.body.appendChild(g.dragScript.el);
+      this.elScripts.appendChild(g.dragScript.el);
 
       var pos = workspace.worldPosition;
-      script.slideTo(dragPos.x + pos.x, dragPos.y + pos.y, function() {
-        document.body.removeChild(script.el);
-        script.el.classList.remove('Visual-dragging');
+      script.slideTo(dragPos.x + pos.x / this._blockScale, dragPos.y + pos.y / this._blockScale, function() {
+        this.elScripts.removeChild(script.el);
         script.removeShadow();
         script.restore(state);
       }, this);
@@ -3099,13 +3199,13 @@ function Visual(options) {
 
   App.prototype.addScriptCommandFeedback = function(g, x, y, script) {
     if (!script.isScript) return;
-    x += script.x;
-    y += script.y;
+    x += script.x * this._blockScale;
+    y += script.y * this._blockScale;
     if (!script.hasFinal && !script.isReporter && !g.commandHasHat) {
       this.addFeedback(g, {
         x: x,
-        y: y + script.height,
-        feedbackY: y + script.height,
+        y: y + script.height * this._blockScale,
+        feedbackY: y + script.height * this._blockScale,
         rangeX: this.commandFeedbackRange,
         rangeY: this.feedbackRange,
         type: 'append',
@@ -3115,7 +3215,7 @@ function Visual(options) {
     if (g.commandScript && script.parent.isWorkspace && !script.hasHat && !script.isReporter) {
       this.addFeedback(g, {
         x: x,
-        y: y - g.commandScript.y,
+        y: y - g.commandScript.y * this._blockScale,
         feedbackY: y,
         rangeX: this.commandFeedbackRange,
         rangeY: this.feedbackRange,
@@ -3131,8 +3231,8 @@ function Visual(options) {
   };
 
   App.prototype.addBlockCommandFeedback = function(g, x, y, block, isTop) {
-    y += block.y;
-    x += block.x;
+    y += block.y * this._blockScale;
+    x += block.x * this._blockScale;
     var args = block.args;
     var length = args.length;
     for (var i = 0; i < length; i++) {
@@ -3140,13 +3240,13 @@ function Visual(options) {
       if (a.isBlock) {
         this.addBlockCommandFeedback(g, x, y, a);
       } else if (a._type === 't' && !g.commandHasHat) {
-        this.addScriptCommandFeedback(g, x + a.x, y + a.y, a.script);
+        this.addScriptCommandFeedback(g, x + a.x * this._blockScale, y + a.y * this._blockScale, a.script);
       }
     }
     if (isTop && block.isHat || !isTop && g.commandHasHat || g.commandHasFinal || block.isReporter) return;
     this.addFeedback(g, {
       x: x,
-      y: isTop && block.parent.parent.isWorkspace ? y - g.dragScript.height : y,
+      y: isTop && block.parent.parent.isWorkspace ? y - g.dragScript.height * this._blockScale : y,
       feedbackY: y,
       rangeX: this.commandFeedbackRange,
       rangeY: this.feedbackRange,
@@ -3158,8 +3258,8 @@ function Visual(options) {
 
   App.prototype.addScriptReporterFeedback = function(g, x, y, script) {
     if (!script.isScript) return;
-    x += script.x;
-    y += script.y;
+    x += script.x * script._scale;
+    y += script.y * script._scale;
     var blocks = script.blocks;
     var length = blocks.length;
     for (var i = 0; i < length; i++) {
@@ -3168,14 +3268,14 @@ function Visual(options) {
   };
 
   App.prototype.addBlockReporterFeedback = function(g, x, y, block) {
-    x += block.x;
-    y += block.y;
+    x += block.x * block._scale;
+    y += block.y * block._scale;
     var args = block.args;
     var length = args.length;
     for (var i = 0; i < length; i++) {
       var a = args[i];
-      var ax = x + a.x;
-      var ay = y + a.y;
+      var ax = x + a.x * this._blockScale;
+      var ay = y + a.y * this._blockScale;
       if (a._type === 't') {
         this.addScriptReporterFeedback(g, ax, ay, a.script);
       } else {
@@ -3198,10 +3298,10 @@ function Visual(options) {
   };
 
   App.prototype.addFeedback = function(g, obj) {
-    var dx = obj.x - g.dragScript.x;
-    var dy = obj.y - g.dragScript.y;
+    var dx = obj.x - g.dragScript.x * this._blockScale;
+    var dy = obj.y - g.dragScript.y * this._blockScale;
     var d2 = dx * dx + dy * dy;
-    if (Math.abs(dx) > obj.rangeX || Math.abs(dy) > obj.rangeY || d2 > g.feedbackDistance) return;
+    if (Math.abs(dx) > obj.rangeX * this._blockScale || Math.abs(dy) > obj.rangeY * this._blockScale || d2 > g.feedbackDistance) return;
     g.feedbackDistance = d2;
     g.feedbackInfo = obj;
   };
@@ -3213,18 +3313,21 @@ function Visual(options) {
     var context = g.feedback;
     var canvas = g.feedback.canvas;
     var b = g.dragScript.blocks[0];
+    var s = this._blockScale;
     var l = this.feedbackLineWidth;
     var r = l/2;
 
-    var pi = b.puzzleInset;
-    var pw = b.puzzleWidth;
-    var p = b.puzzle;
+    var pi = b.puzzleInset * s;
+    var pw = b.puzzleWidth * s;
+    var p = b.puzzle * s;
 
+    var x, y;
     switch (info.type) {
       case 'wrap':
-        setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.feedbackY - r)+'px)');
-        var w = b.ownWidth - g.commandScript.x + l;
-        var h = info.script.height + l;
+        x = info.x - r;
+        y = info.feedbackY - r;
+        var w = (b.ownWidth - g.commandScript.x) * s + l;
+        var h = info.script.height * s + l;
         canvas.width = w;
         canvas.height = h + p;
 
@@ -3248,8 +3351,9 @@ function Visual(options) {
         break;
       case 'insert':
       case 'append':
-        setTransform(canvas, 'translate('+(info.x - r)+'px, '+(info.feedbackY - r)+'px)');
-        canvas.width = b.ownWidth + l;
+        x = info.x - r;
+        y = info.feedbackY - r;
+        canvas.width = b.ownWidth * s + l;
         canvas.height = l + p;
         context.lineWidth = l;
         context.lineCap = 'round';
@@ -3262,19 +3366,21 @@ function Visual(options) {
         context.lineTo(pi + pw + p * 2 + r, r);
         context.lineTo(canvas.width - r, r);
         context.stroke();
-        return;
+        break;
       case 'replace':
-        var w = info.arg.width;
-        var h = info.arg.height;
+        x = info.x - l;
+        y = info.y - l;
+        var w = info.arg.width * s;
+        var h = info.arg.height * s;
         canvas.width = w + l * 2;
         canvas.height = h + l * 2;
-        setTransform(canvas, 'translate('+(info.x - l)+'px, '+(info.y - l)+'px)');
 
         context.translate(l, l);
+        context.scale(s, s);
 
         info.arg.pathShadowOn(context);
 
-        context.lineWidth = l;
+        context.lineWidth = l / this._blockScale;
         context.lineCap = 'round';
         context.lineJoin = 'round';
         context.strokeStyle = '#fff';
@@ -3287,7 +3393,7 @@ function Visual(options) {
         context.globalCompositeOperation = 'source-over';
         context.fillStyle = 'rgba(255, 255, 255, .6)';
         context.fill();
-        return;
+        break;
       // case 'replace': // Scratch 2.0
       //   var w = info.arg.width;
       //   var h = info.arg.height;
@@ -3315,6 +3421,9 @@ function Visual(options) {
       //   info.arg.pathShadowOn(context);
       //   context.fill();
       //   return;
+    }
+    if (x != null) {
+      setTransform(canvas, 'translate('+x+'px,'+y+'px)');
     }
   };
 
