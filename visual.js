@@ -175,13 +175,16 @@ function Visual(options) {
     if (this.x === x && this.y === y) return;
     this.x = x;
     this.y = y;
-    setTransform(this.el, (this.transform || '')+' translate('+x+'px,'+y+'px)');
+    setTransform(this.el, 'translate('+x+'px,'+y+'px)');
     return this;
   }
 
-  function useTransform(transform) {
-    this.transform = transform;
-    setTransform(this.el, (this.transform || '')+' translate('+x+'px,'+y+'px)');
+  function scaledMoveTo(x, y) {
+    if (this.x === x && this.y === y && this.__scale == this._scale) return;
+    this.x = x;
+    this.y = y;
+    this.__scale = this._scale;
+    setTransform(this.el, 'translate('+(x * this._scale)+'px,'+(y * this._scale)+'px)');
     return this;
   }
 
@@ -198,6 +201,27 @@ function Visual(options) {
     setTransition(this.el, 'all '+time+'s ease');
     this.el.offsetHeight;
     moveTo.call(this, x, y);
+    var self = this;
+    setTimeout(function() {
+      setTransition(self.el, '');
+      if (callback) callback.call(context);
+    }, time * 1000);
+    return this;
+  }
+
+  function scaledSlideTo(x, y, time, callback, context) {
+    if (typeof time === 'function') {
+      context = callback;
+      callback = time;
+      time = options.animationTime;
+    }
+    if (this.x === x && this.y === y) {
+      if (callback) setTimeout(callback.bind(context));
+      return this;
+    }
+    setTransition(this.el, 'all '+time+'s ease');
+    this.el.offsetHeight;
+    scaledMoveTo.call(this, x, y);
     var self = this;
     setTimeout(function() {
       setTransition(self.el, '');
@@ -270,7 +294,7 @@ function Visual(options) {
     return x >= 0 && y >= 0 && x < extent.width && y < extent.height;
   }
 
-  function transparentAt(context, x, y) {
+  function opaqueAt(context, x, y) {
     return containsPoint(context.canvas, x, y) && context.getImageData(x, y, 1, 1).data[3] > 0;
   }
 
@@ -662,6 +686,7 @@ function Visual(options) {
     if (part.parent) part.parent.remove(part);
 
     part.parent = this;
+    part.setScale(this._scale);
     this.parts.push(part);
 
     if (part.isBlock || part.isArg) {
@@ -683,6 +708,7 @@ function Visual(options) {
     if (newPart.parent) newPart.parent.remove(newPart);
 
     oldPart.parent = null;
+    newPart.setScale(this._scale);
     newPart.parent = this;
 
     var i = this.parts.indexOf(oldPart);
@@ -742,7 +768,7 @@ function Visual(options) {
     }
     if (this.parent.isBlock) {
       this.parent.reset(this);
-      return new Script().add(this);
+      return new Script().setScale(this._scale).add(this);
     }
     if (this.parent.isScript) {
       return this.parent.splitAt(this);
@@ -750,14 +776,13 @@ function Visual(options) {
   };
 
   Block.prototype.copy = function() {
-    var b = new Block([this._type, this.infoSpec, this.name, this._category], this.args.map(copy));
+    var b = new Block([this._type, this.infoSpec, this.name, this._category], this.args.map(copy)).setScale(this._scale);
     if (b._color !== this._color) b.color = this.color;
-    b.setScale(this._scale);
     return b;
   };
 
   Block.prototype.scriptCopy = function() {
-    if (!this.parent || !this.parent.isScript) return new Script().add(this.copy());
+    if (!this.parent || !this.parent.isScript) return new Script().setScale(this._scale).add(this.copy());
     return this.parent.copyAt(this);
   };
 
@@ -772,12 +797,11 @@ function Visual(options) {
       var o = arg.objectFromPoint(x - arg.x, y - arg.y);
       if (o) return o;
     }
-    return transparentAt(this.context, x * this._scale, y * this._scale) ? this : null;
+    return opaqueAt(this.context, x * this._scale, y * this._scale) ? this : null;
   };
 
-  Block.prototype.moveTo = moveTo;
-  Block.prototype.slideTo = slideTo;
-  Block.prototype.useTransform = useTransform;
+  Block.prototype.moveTo = scaledMoveTo;
+  Block.prototype.slideTo = scaledSlideTo;
   Block.prototype.layout = layout;
 
   Block.prototype.layoutChildren = function() {
@@ -823,6 +847,7 @@ function Visual(options) {
   };
 
   Block.prototype.layoutSelf = function() {
+    var s = this._scale;
     var xp = this.paddingX;
     var tp = this.paddingTop - (this.hasScript ? 1 : 0);
     var bp = this.paddingBottom;
@@ -937,13 +962,13 @@ function Visual(options) {
   };
 
   Block.prototype.setScale = function(value) {
-    if (this._scale === value) return;
+    if (this._scale === value) return this;
     this._scale = value;
-    setTransform(this.canvas, 'scale('+1/value+')');
     this.parts.forEach(function(p) {
       if (p.setScale) p.setScale(value);
     });
-    this.redraw();
+    this.layout();
+    return this;
   };
 
   Block.prototype.redraw = redraw;
@@ -975,7 +1000,8 @@ function Visual(options) {
 
 
   function Label(text) {
-    this.el = el('Visual-absolute Visual-label');
+    this.el = el('Visual-absolute');
+    this.el.appendChild(this.elText = el('Visual-absolute Visual-label'));
 
     this.text = text;
   }
@@ -985,6 +1011,7 @@ function Visual(options) {
   Label.prototype.isLabel = true;
 
   Label.prototype.parent = null;
+  Label.prototype._scale = 1;
   Label.prototype.x = 0;
   Label.prototype.y = 0;
   Label.prototype.dirty = false;
@@ -992,7 +1019,7 @@ function Visual(options) {
   def(Label.prototype, 'text', {
     get: function() {return this._text},
     set: function(value) {
-      this.el.textContent = value;
+      this.elText.textContent = value;
       this._text = value;
       var metrics = Label.measure(value);
       this.width = metrics.width;
@@ -1007,12 +1034,19 @@ function Visual(options) {
 
   def(Label.prototype, 'dragObject', {get: function() {return this.parent.dragObject}});
 
+  Label.prototype.setScale = function(value) {
+    if (this._scale === value) return this;
+    this._scale = value;
+    setTransform(this.elText, 'scale('+value+')');
+    return this;
+  };
+
   Label.prototype.layoutSelf = function() {};
   Label.prototype.drawChildren = function() {};
   Label.prototype.layoutChildren = layoutNoChildren;
   Label.prototype.layout = layout;
-  Label.prototype.moveTo = moveTo;
-  Label.prototype.slideTo = slideTo;
+  Label.prototype.moveTo = scaledMoveTo;
+  Label.prototype.slideTo = scaledSlideTo;
 
 
   function Icon(name) {
@@ -1078,17 +1112,17 @@ function Visual(options) {
   };
 
   Icon.prototype.setScale = function(value) {
-    if (this._scale === value) return;
+    if (this._scale === value) return this;
     this._scale = value;
-    setTransform(this.canvas, 'scale('+1/value+')');
-    this.redraw();
+    this.layout();
+    return this;
   };
 
   Icon.prototype.layoutChildren = layoutNoChildren;
   Icon.prototype.drawChildren = drawNoChildren;
   Icon.prototype.layout = layout;
-  Icon.prototype.moveTo = moveTo;
-  Icon.prototype.slideTo = slideTo;
+  Icon.prototype.moveTo = scaledMoveTo;
+  Icon.prototype.slideTo = scaledSlideTo;
 
   Icon.prototype.pathLoopArrow = function(context) {
     // m 1,11 8,0 2,-2 0,-3 3,0 -4,-5 -4,5 3,0 0,3 -8,0 z
@@ -1308,7 +1342,7 @@ function Visual(options) {
     if (this._type === 'd') {
       var pos = this.worldPosition;
     }
-    if (this._type === 'm' || this._type === 'd' && x >= pos.x + this.arrowX*this._scale) {
+    if (this._type === 'm' || this._type === 'd' && x >= pos.x + this.arrowX) {
       var menu = options.getMenu(this);
       if (menu) {
         pos = pos || this.worldPosition;
@@ -1325,9 +1359,7 @@ function Visual(options) {
 
   Arg.prototype.copy = function() {
     var value = this.type === 't' ? this.script.copy() : this.value;
-    var arg = new Arg([this.type, this.menu], value);
-    arg.setScale(this._scale);
-    return arg;
+    return new Arg([this.type, this.menu], value).setScale(this._scale);
   };
 
   Arg.prototype.toJSON = function() {
@@ -1340,7 +1372,7 @@ function Visual(options) {
       case 'l': return containsPoint(this, x, y) ? this : null;
       case 't': return this.script.objectFromPoint(x, y);
     }
-    return transparentAt(this.context, x * this._scale, y * this._scale) ? this : null;
+    return opaqueAt(this.context, x * this._scale, y * this._scale) ? this : null;
   };
 
   Arg.prototype.draw = function() {
@@ -1459,9 +1491,9 @@ function Visual(options) {
         this.field.style.height = this.height + 'px';
         // this.field.style.lineHeight = this.height + 'px';
         if (this.arrow) {
-          this.arrowX = this.width - this.arrowWidth - 3;
-          this.arrowY = (this.height - this.arrowHeight) / 2 | 0;
-          setTransform(this.arrow, 'translate('+this.arrowX+'px, '+this.arrowY+'px) scale('+1/this._scale+')');
+          this.arrowX = (this.width - this.arrowWidth) * this._scale - 3;
+          this.arrowY = ((this.height - this.arrowHeight) * this._scale) / 2 | 0;
+          setTransform(this.arrow, 'translate('+this.arrowX+'px, '+this.arrowY+'px)');
         }
         break;
       case 'l':
@@ -1491,15 +1523,17 @@ function Visual(options) {
   };
 
   Arg.prototype.setScale = function(value) {
-    if (this._scale === value) return;
+    if (this._scale === value) return this;
     this._scale = value;
-    setTransform(this.canvas, 'scale('+1/value+')');
     if (this.script) this.script.setScale(value);
-    this.redraw();
+    this.layout();
     if (this.arrow) {
       this.drawArrow();
-      setTransform(this.arrow, 'translate('+this.arrowX+'px, '+this.arrowY+'px) scale('+1/this._scale+')');
     }
+    if (this.field) {
+      setTransform(this.field, 'scale('+value+')');
+    }
+    return this;
   };
 
   Arg.prototype.layoutChildren = function() {
@@ -1520,8 +1554,8 @@ function Visual(options) {
 
   Arg.prototype.redraw = redraw;
   Arg.prototype.layout = layout;
-  Arg.prototype.moveTo = moveTo;
-  Arg.prototype.slideTo = slideTo;
+  Arg.prototype.moveTo = scaledMoveTo;
+  Arg.prototype.slideTo = scaledSlideTo;
 
 
   function Script(blocks) {
@@ -1559,16 +1593,17 @@ function Visual(options) {
 
   Script.prototype.shadow = function(offsetX, offsetY, blur, color) {
     var canvas = el('canvas', 'Visual-absolute');
-    setTransform(canvas, 'translate('+(offsetX - blur)+'px, '+(offsetY - blur)+'px)');
-    canvas.width = this.width + blur * 2;
-    canvas.height = this.ownHeight + blur * 2;
+    setTransform(canvas, 'translate('+(offsetX - blur * this._scale)+'px, '+(offsetY - blur * this._scale)+'px)');
+    canvas.width = (this.width + blur * 2) * this._scale;
+    canvas.height = (this.ownHeight + blur * 2) * this._scale;
 
     var context = canvas.getContext('2d');
     context.save();
+    context.scale(this._scale, this._scale);
     context.shadowColor = color;
-    context.shadowBlur = blur;
-    context.shadowOffsetX = 10000 + blur;
-    context.shadowOffsetY = 10000 + blur;
+    context.shadowBlur = blur * this._scale;
+    context.shadowOffsetX = (10000 + blur) * this._scale;
+    context.shadowOffsetY = (10000 + blur) * this._scale;
     context.translate(-10000, -10000);
     this.pathShadowOn(context);
     context.fill();
@@ -1610,20 +1645,21 @@ function Visual(options) {
 
   Script.prototype.outline = function(size, color) {
     var canvas = el('canvas', 'Visual-absolute');
-    setTransform(canvas, 'translate('+(-size)+'px, '+(-size)+'px)');
-    canvas.width = this.width + size * 2;
-    canvas.height = this.ownHeight + size * 2;
+    setTransform(canvas, 'translate('+(-size * this._scale)+'px, '+(-size * this._scale)+'px)');
+    canvas.width = (this.width + size * 2) * this._scale;
+    canvas.height = (this.ownHeight + size * 2) * this._scale;
 
     var context = canvas.getContext('2d');
     context.save();
+    context.scale(this._scale, this._scale);
     context.shadowColor = color;
     context.shadowBlur = 0;
     context.translate(-10000, -10000);
     this.pathShadowOn(context);
     for (var x = 0; x <= 2; x += 2) {
       for (var y = 0; y <= 2; y += 2) {
-        context.shadowOffsetX = 10000 + x * size;
-        context.shadowOffsetY = 10000 + y * size;
+        context.shadowOffsetX = (10000 + x * size) * this._scale;
+        context.shadowOffsetY = (10000 + y * size) * this._scale;
         context.fill();
       }
     }
@@ -1660,7 +1696,7 @@ function Visual(options) {
   };
 
   Script.prototype.splitAt = function(topBlock) {
-    var script = new Script();
+    var script = new Script().setScale(this._scale);
     if (topBlock.parent !== this) return script;
 
     var blocks = this.blocks;
@@ -1837,15 +1873,14 @@ function Visual(options) {
   };
 
   Script.prototype.copy = function() {
-    var script = new Script();
+    var script = new Script().setScale(this._scale);
     script.moveTo(this.x, this.y);
     script.addScript({blocks: this.blocks.map(copy)});
-    script.setScale(this._scale);
     return script;
   };
 
   Script.prototype.copyAt = function (b) {
-    var script = new Script();
+    var script = new Script().setScale(this._scale);
     var i = this.blocks.indexOf(b);
     if (i === -1) return script;
     script.addScript({blocks: this.blocks.slice(i).map(copy)});
@@ -1904,16 +1939,18 @@ function Visual(options) {
   };
 
   Script.prototype.setScale = function(value) {
-    if (this._scale === value) return;
+    if (this._scale === value) return this;
     this._scale = value;
     this.blocks.forEach(function(b) {
       b.setScale(value);
     });
+    if (this.parent && this.parent.isWorkspace) this.moveTo(this.x, this.y);
+    return this;
   };
 
   Script.prototype.layout = layout;
-  Script.prototype.moveTo = moveTo;
-  Script.prototype.slideTo = slideTo;
+  Script.prototype.moveTo = scaledMoveTo;
+  Script.prototype.slideTo = scaledSlideTo;
 
 
   function Comment(text, width, height, collapse) {
@@ -1932,8 +1969,6 @@ function Visual(options) {
     this.effectFns = [];
     this.effects = [];
 
-    this.x = 0;
-    this.y = 0;
     this.width = this.ownWidth = width || 150;
     this.height = this.ownHeight = this.fullHeight = height || 200;
 
@@ -1946,6 +1981,9 @@ function Visual(options) {
   Comment.prototype.isResizable = true;
 
   Comment.prototype.parent = null;
+  Comment.prototype._scale = 1;
+  Comment.prototype.x = 0;
+  Comment.prototype.y = 0;
   Comment.prototype.dirty = true;
 
   Comment.prototype.minWidth = 100;
@@ -2026,7 +2064,7 @@ function Visual(options) {
   };
 
   Comment.prototype.click = function(x, y) {
-    if (y - this.worldPosition.y < this.titleHeight) {
+    if (y - this.worldPosition.y < this.titleHeight * this._scale) {
       this.collapse = !this.collapse;
     } else {
       this.field.focus();
@@ -2042,7 +2080,7 @@ function Visual(options) {
   };
 
   Comment.prototype.resizableAt = function(x, y) {
-    return x >= this.width - this.resizerSize - 2 && y >= this.height - this.resizerSize - 2;
+    return x >= (this.width - this.resizerSize - 2) * this._scale && y >= (this.height - this.resizerSize - 2) * this._scale && opaqueAt(this.context, x, y);
   };
 
   Comment.prototype.resizeTo = function(w, h) {
@@ -2061,6 +2099,7 @@ function Visual(options) {
   Comment.prototype.removeEffect = Script.prototype.removeEffect;
 
   Comment.prototype.layoutSelf = function() {
+    var s = this._scale;
     var w = this.width;
     var h = this._collapse ? this.titleHeight + 2 : this.fullHeight;
     if (this._collapse) {
@@ -2078,9 +2117,20 @@ function Visual(options) {
     this.redraw();
   };
 
+  Comment.prototype.setScale = function(value) {
+    if (this._scale === value) return this;
+    this._scale = value;
+    setTransform(this.title, 'scale('+value+') translate(16px,1px)');
+    setTransform(this.field, 'scale('+value+') translate(0,'+this.titleHeight+'px)');
+    this.moveTo(this.x, this.y);
+    this.layout();
+    return this;
+  };
+
   Comment.prototype.draw = function() {
-    this.canvas.width = this.width;
-    this.canvas.height = this.height;
+    this.canvas.width = this.width * this._scale;
+    this.canvas.height = this.height * this._scale;
+    this.context.scale(this._scale, this._scale);
     this.drawOn(this.context);
   };
 
@@ -2160,13 +2210,15 @@ function Visual(options) {
     context.arc(r, h - r, r, PI12, PI, false);
   };
 
-  Comment.prototype.objectFromPoint = opaqueObjectFromPoint;
+  Comment.prototype.objectFromPoint = function(x, y) {
+    return opaqueAt(this.context, x * this._scale, y * this._scale) ? this : null;
+  };
   Comment.prototype.layoutChildren = layoutNoChildren;
   Comment.prototype.drawChildren = drawNoChildren;
   Comment.prototype.redraw = redraw;
   Comment.prototype.layout = layout;
-  Comment.prototype.moveTo = moveTo;
-  Comment.prototype.slideTo = slideTo;
+  Comment.prototype.moveTo = scaledMoveTo;
+  Comment.prototype.slideTo = scaledSlideTo;
 
 
   function Workspace(host) {
@@ -2216,7 +2268,7 @@ function Visual(options) {
     return new Menu(
       ['clean up', this.cleanUp],
       ['add comment', function() {
-        this.add(new Comment('add comment here...').moveTo(pressX, pressY));
+        this.add(new Comment('add comment here...').moveTo(pressX / this._scale, pressY / this._scale));
       }]).translate().withContext(this);
   }});
 
@@ -2368,12 +2420,12 @@ function Visual(options) {
   };
 
   Workspace.prototype.setScale = function(value) {
-    if (this._scale === value) return;
+    if (this._scale === value) return this;
     this._scale = value;
-    setTransform(this.elContents, 'scale('+value+')');
     this.scripts.forEach(function(s) {
       if (s.setScale) s.setScale(value);
     });
+    return this;
   };
 
   Workspace.prototype.resize = function() {
@@ -2386,8 +2438,8 @@ function Visual(options) {
     var vw = this.width + this.scrollX + this.extraSpace;
     var vh = this.height + this.scrollY + this.extraSpace;
 
-    this.fill.style.width = Math.max(this.contentWidth, vw) * this._scale + 'px';
-    this.fill.style.height = Math.max(this.contentHeight, vh) * this._scale + 'px';
+    this.fill.style.width = Math.max(this.contentWidth * this._scale, vw) + 'px';
+    this.fill.style.height = Math.max(this.contentHeight * this._scale, vh) + 'px';
   };
 
   Workspace.prototype.cleanUp = function() {
@@ -2589,12 +2641,13 @@ function Visual(options) {
     this.el = el('Visual-absolute');
     content.style.display = 'block';
     this.el.appendChild(this.content = content);
+    content.classList.add('Visual-absolute');
   }
 
   PaletteElement.prototype.isElement = true;
 
   PaletteElement.prototype.parent = null;
-  PaletteElement.prototype._scale = null;
+  PaletteElement.prototype._scale = 1;
   PaletteElement.prototype.x = 0;
   PaletteElement.prototype.y = 0;
   PaletteElement.prototype.dirty = true;
@@ -2606,13 +2659,19 @@ function Visual(options) {
     this.height = this.ownHeight = this.content.offsetHeight;
   };
 
-  PaletteElement.prototype.setScale = function() {}
+  PaletteElement.prototype.setScale = function(value) {
+    if (this._scale === value) return this;
+    this._scale = value;
+    setTransform(this.content, 'scale('+value+')');
+    this.moveTo(this.x, this.y);
+    return this;
+  }
 
   PaletteElement.prototype.layoutChildren = layoutNoChildren;
   PaletteElement.prototype.drawChildren = function() {};
   PaletteElement.prototype.layout = layout;
-  PaletteElement.prototype.moveTo = moveTo;
-  PaletteElement.prototype.slideTo = slideTo;
+  PaletteElement.prototype.moveTo = scaledMoveTo;
+  PaletteElement.prototype.slideTo = scaledSlideTo;
 
 
   function Target(host) {
@@ -2623,6 +2682,7 @@ function Visual(options) {
   Target.prototype.isWorkspace = true;
   Target.prototype.isTarget = true;
 
+  Target.prototype._scale = 1;
   Target.prototype.scrollX = 0;
   Target.prototype.scrollY = 0;
 
@@ -2654,7 +2714,9 @@ function Visual(options) {
     return true;
   };
 
-  Target.prototype.setScale = function() {};
+  Target.prototype.setScale = function() {
+    return this;
+  };
 
 
   function App() {
@@ -2699,7 +2761,6 @@ function Visual(options) {
     get: function() {return this._blockScale},
     set: function(value) {
       this._blockScale = value;
-      setTransform(this.elScripts, 'scale('+value+')');
       this.workspaces.forEach(function(s) {
         s.setScale(value);
       });
@@ -2791,7 +2852,7 @@ function Visual(options) {
     }
 
     g.dragScript = script;
-      g.dragScript.moveTo((g.dragX + g.mouseX) / this._blockScale, (g.dragY + g.mouseY) / this._blockScale);
+    g.dragScript.moveTo((g.dragX + g.mouseX) / this._blockScale, (g.dragY + g.mouseY) / this._blockScale);
     g.dragScript.parent = this;
     this.elScripts.appendChild(g.dragScript.el);
     g.dragScript.layoutChildren();
@@ -2976,11 +3037,11 @@ function Visual(options) {
       this.grab(block.detach(), pos.x - g.pressX, pos.y - g.pressY, g);
       e.preventDefault();
     } else if (g.resizing) {
-      g.pressObject.resizeTo(Math.max(g.pressObject.minWidth, g.dragWidth + g.mouseX), Math.max(g.pressObject.minHeight, g.dragHeight + g.mouseY));
+      g.pressObject.resizeTo(Math.max(g.pressObject.minWidth, (g.dragWidth + g.mouseX) / this._blockScale | 0), Math.max(g.pressObject.minHeight, (g.dragHeight + g.mouseY) / this._blockScale | 0));
     } else if (g.shouldResize) {
       g.resizing = true;
-      g.dragWidth = g.pressObject.width - g.pressX;
-      g.dragHeight = g.pressObject.height - g.pressY;
+      g.dragWidth = g.pressObject.width * this._blockScale - g.pressX;
+      g.dragHeight = g.pressObject.height * this._blockScale - g.pressY;
     }
   };
 
