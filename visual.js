@@ -3637,6 +3637,9 @@ function Visual(options) {
             input.addEventListener('change', this.change);
             it.appendChild(input);
           }
+          if (item[2].checked) {
+            it.classList.add('Visual-menu-checked');
+          }
         }
       }
       this.els.push(it);
