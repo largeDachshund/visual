@@ -13,14 +13,21 @@
   user-select: none;
 }
 
+.Visual-metrics-container {
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .Visual-metrics {
-  position: fixed;
-  top: -10000px;
-  left: -10000px;
+  position: absolute;
   white-space: pre;
   padding: 0;
-  pointer-events: none;
-  visibility: hidden;
 }
 
 /* Workspace */

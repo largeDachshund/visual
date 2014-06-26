@@ -369,7 +369,7 @@ function Visual(options) {
     var field = el('Visual-metrics ' + className);
     var node = document.createTextNode('');
     field.appendChild(node);
-    document.body.appendChild(field);
+    metricsContainer.appendChild(field);
 
     var stringCache = Object.create(null);
 
@@ -386,6 +386,9 @@ function Visual(options) {
   }
 
 
+  var metricsContainer = el('Visual-metrics-container');
+  document.body.appendChild(metricsContainer);
+
   var scrollbarWidth = function() {
     var field = document.createElement('div');
     field.style.width = '200px';
@@ -398,9 +401,11 @@ function Visual(options) {
     content.style.height = '200px';
 
     field.appendChild(content);
-    document.body.appendChild(field);
+    metricsContainer.appendChild(field);
 
-    return field.offsetWidth - field.clientWidth;
+    var w = field.offsetWidth - field.clientWidth;
+    metricsContainer.removeChild(field);
+    return w;
   }();
 
 
@@ -2513,7 +2518,7 @@ function Visual(options) {
     } else {
       script.moveTo(this.cx, this.cy);
 
-      if (script.isElement) document.body.appendChild(script.el);
+      if (script.isElement) metricsContainer.appendChild(script.el);
       script.layoutChildren();
       script.drawChildren();
       this.lineHeight = Math.max(this.lineHeight, script.ownHeight);
