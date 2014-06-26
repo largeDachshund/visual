@@ -3783,6 +3783,7 @@ function Visual(options) {
 
   return {
     util: {
+      metricsContainer: metricsContainer,
       format: format,
       obsoleteBlock: obsoleteBlock,
       createMetrics: createMetrics,
