@@ -1183,6 +1183,7 @@ function Visual(options) {
 
   Arg.prototype.insetColor = 'rgba(0, 0, 0, .1)';
   Arg.prototype.fieldPadding = 4;
+  Arg.prototype.minWidth = 6;
 
   def(Arg.prototype, 'value', {
     get: function() {
@@ -1484,7 +1485,7 @@ function Visual(options) {
       case 'n':
       case 's':
         var metrics = Arg.measure(this._type === 'm' ? this.field.textContent : this.field.value);
-        var w = Math.max(6, metrics.width) + this.fieldPadding * 2;
+        var w = Math.max(this.minWidth, metrics.width) + this.fieldPadding * 2;
         if (this.arrow) {
           this.width = w + this.arrowWidth + 1;
           w -= this.fieldPadding - 2;
