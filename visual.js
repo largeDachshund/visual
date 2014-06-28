@@ -3375,6 +3375,7 @@ function Visual(options) {
   };
 
   App.prototype.feedbackLineWidth = 6;
+  App.prototype.feedbackColor = '#fff';
 
   App.prototype.renderFeedback = function(g) {
     var info = g.feedbackInfo
@@ -3402,7 +3403,7 @@ function Visual(options) {
         context.lineWidth = l;
         context.lineCap = 'round';
         context.lineJoin = 'round';
-        context.strokeStyle = '#fff';
+        context.strokeStyle = this.feedbackColor;
         context.moveTo(w - r, r);
         context.lineTo(pi + pw + p * 2 + r, r);
         context.lineTo(pi + pw + p + r, r + p);
@@ -3426,7 +3427,7 @@ function Visual(options) {
         context.lineWidth = l;
         context.lineCap = 'round';
         context.lineJoin = 'round';
-        context.strokeStyle = '#fff';
+        context.strokeStyle = this.feedbackColor;
         context.moveTo(r, r);
         context.lineTo(pi + r, r);
         context.lineTo(pi + p + r, r + p);
@@ -3451,7 +3452,7 @@ function Visual(options) {
         context.lineWidth = l / this._blockScale;
         context.lineCap = 'round';
         context.lineJoin = 'round';
-        context.strokeStyle = '#fff';
+        context.strokeStyle = this.feedbackColor;
         context.stroke();
 
         context.globalCompositeOperation = 'destination-out';
@@ -3459,7 +3460,8 @@ function Visual(options) {
         info.arg.pathShadowOn(context);
         context.fill();
         context.globalCompositeOperation = 'source-over';
-        context.fillStyle = 'rgba(255, 255, 255, .6)';
+        context.globalAlpha = .6;
+        context.fillStyle = this.feedbackColor;
         context.fill();
         break;
       // case 'replace': // Scratch 2.0
@@ -3481,7 +3483,7 @@ function Visual(options) {
       //   context.shadowOffsetX = 10000;
       //   context.shadowOffsetY = 10000;
       //   context.shadowBlur = r;
-      //   context.shadowColor = '#fff';
+      //   context.shadowColor = this.feedbackColor;
       //   context.stroke();
       //   context.restore();
 
