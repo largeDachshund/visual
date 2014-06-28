@@ -2257,7 +2257,8 @@ function Visual(options) {
 
   Workspace.prototype.paddingX = 20;
   Workspace.prototype.paddingY = 20;
-  Workspace.prototype.extraSpace = 100;
+  Workspace.prototype.extraSpaceX = 100;
+  Workspace.prototype.extraSpaceY = 100;
   Workspace.prototype.spacing = 20;
 
   def(Workspace.prototype, 'app', {get: getApp});
@@ -2337,8 +2338,8 @@ function Visual(options) {
       s.parent = null;
     }
     this.scripts = [];
-    this.contentWidth = this.paddingX + this.extraSpace;
-    this.contentHeight = this.paddingY + this.extraSpace;
+    this.contentWidth = this.paddingX + this.extraSpaceX;
+    this.contentHeight = this.paddingY + this.extraSpaceY;
     this.refill();
     return this.dispatch('change');
   };
@@ -2416,8 +2417,8 @@ function Visual(options) {
       height += y;
     }
 
-    width += this.extraSpace;
-    height += this.extraSpace;
+    width += this.extraSpaceX;
+    height += this.extraSpaceY;
 
     this.contentWidth = width;
     this.contentHeight = height;
@@ -2441,8 +2442,8 @@ function Visual(options) {
   };
 
   Workspace.prototype.refill = function() {
-    var vw = this.width + this.scrollX + this.extraSpace;
-    var vh = this.height + this.scrollY + this.extraSpace;
+    var vw = this.width + this.scrollX + this.extraSpaceX;
+    var vh = this.height + this.scrollY + this.extraSpaceY;
 
     this.fill.style.width = Math.max(this.contentWidth * this._scale, vw) + 'px';
     this.fill.style.height = Math.max(this.contentHeight * this._scale, vh) + 'px';
@@ -2500,7 +2501,8 @@ function Visual(options) {
   Palette.prototype.isPalette = true;
   Palette.prototype.paddingX = 10;
   Palette.prototype.paddingY = 10;
-  Palette.prototype.extraSpace = 10;
+  Palette.prototype.extraSpaceX = 10;
+  Palette.prototype.extraSpaceY = 10;
   Palette.prototype.spacing = 7;
   Palette.prototype.spaceSize = 24;
 
@@ -2523,7 +2525,7 @@ function Visual(options) {
       script.layoutChildren();
       script.drawChildren();
       this.lineHeight = Math.max(this.lineHeight, script.ownHeight);
-      this.contentWidth = Math.max(this.contentWidth, this.cx + script.ownWidth + this.extraSpace);
+      this.contentWidth = Math.max(this.contentWidth, this.cx + script.ownWidth + this.extraSpaceX);
       if (script.isInline) {
         this.line.push(script);
         this.cx += script.ownWidth + this.spacing;
@@ -2542,7 +2544,7 @@ function Visual(options) {
       this.lineHeight = 0;
       this.line = [];
     }
-    this.contentHeight = this.cy + this.lineHeight + this.extraSpace;
+    this.contentHeight = this.cy + this.lineHeight + this.extraSpaceY;
 
     this.refill();
     return this.dispatch('change');
@@ -2591,7 +2593,6 @@ function Visual(options) {
     var px = this.paddingX;
     var py = this.paddingY;
     var sp = this.spacing;
-    var es = this.extraSpace;
 
     var y = py;
     var x = px;
@@ -2637,8 +2638,8 @@ function Visual(options) {
     this.cx = x;
     this.cy = y;
 
-    this.contentHeight = y + lh + es;
-    this.contentWidth = w + es;
+    this.contentHeight = y + lh + this.extraSpaceY;
+    this.contentWidth = w + this.extraSpaceX;
     this.refill();
   };
 
