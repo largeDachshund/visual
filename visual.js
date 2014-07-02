@@ -2487,12 +2487,12 @@ function Visual(options) {
     };
   };
 
-  Palette.element = function(el) {
-    return new PaletteElement(el);
+  Palette.element = function(el, w, h) {
+    return new PaletteElement(el, w, h);
   };
 
-  Palette.inline = function(el) {
-    return new PaletteElement(el, true);
+  Palette.inline = function(el, w, h) {
+    return new PaletteElement(el, w, h, true);
   };
 
   Palette.prototype = Object.create(Workspace.prototype);
@@ -2521,7 +2521,6 @@ function Visual(options) {
     } else {
       script.moveTo(this.cx, this.cy);
 
-      if (script.isElement) metricsContainer.appendChild(script.el);
       script.layoutChildren();
       script.drawChildren();
       this.lineHeight = Math.max(this.lineHeight, script.ownHeight);
@@ -2643,8 +2642,10 @@ function Visual(options) {
     this.refill();
   };
 
-  function PaletteElement(content, inline) {
+  function PaletteElement(content, width, height, inline) {
     this.isInline = inline;
+    this.width = this.ownWidth = width;
+    this.height = this.ownHeight = height;
     this.el = el('Visual-absolute');
     content.style.display = 'block';
     this.el.appendChild(this.content = content);
@@ -2661,10 +2662,7 @@ function Visual(options) {
 
   PaletteElement.prototype.objectFromPoint = opaqueObjectFromPoint;
 
-  PaletteElement.prototype.layoutSelf = function() {
-    this.width = this.ownWidth = this.content.offsetWidth;
-    this.height = this.ownHeight = this.content.offsetHeight;
-  };
+  PaletteElement.prototype.layoutSelf = function() {};
 
   PaletteElement.prototype.setScale = function(value) {
     if (this._scale === value) return this;
