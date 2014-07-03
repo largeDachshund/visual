@@ -3601,7 +3601,7 @@ function Visual(options) {
     var items = this.items;
     for (var i = items.length; i--;) {
       var item = items[i];
-      if (item !== Menu.line && !item.translated) {
+      if (item && item !== Menu.line && !item.translated) {
         item[0] = options.getText(item[0]);
         item.translated = true;
       }
@@ -3618,8 +3618,12 @@ function Visual(options) {
     var line = true;
     for (var i = items.length; i--;) {
       var has = items[i] === Menu.line;
-      if (has && line) items.splice(i, 1);
-      line = has;
+      if (items[i]) {
+        if (has && line) items.splice(i, 1);
+        line = has;
+      } else {
+        items.splice(i, 1);
+      }
     }
     if (line) items.shift();
     if (!items.length) return;
