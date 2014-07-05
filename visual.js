@@ -3169,6 +3169,7 @@ function Visual(options) {
       case 'wrap':
         info.script.parent.add(info.script.x - g.commandScript.x, info.script.y - g.commandScript.y, g.dragScript);
         g.commandScript.value = info.script;
+        info.script.layoutChildren();
         return;
       case 'replace':
         if (info.arg.isBlock) {
