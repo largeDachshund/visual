@@ -1668,17 +1668,13 @@ function Visual(options) {
     var context = canvas.getContext('2d');
     context.save();
     context.scale(this._scale, this._scale);
-    context.shadowColor = color;
-    context.shadowBlur = 0;
-    context.translate(-10000, -10000);
+    context.translate(size, size);
     this.pathShadowOn(context);
-    for (var x = 0; x <= 2; x += 2) {
-      for (var y = 0; y <= 2; y += 2) {
-        context.shadowOffsetX = (10000 + x * size) * this._scale;
-        context.shadowOffsetY = (10000 + y * size) * this._scale;
-        context.fill();
-      }
-    }
+    context.strokeStyle = color;
+    context.lineWidth = size * 2;
+    context.stroke();
+    context.globalCompositeOperation = 'destination-out';
+    context.fill();
     context.restore();
 
     return canvas;
