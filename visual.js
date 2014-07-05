@@ -2320,6 +2320,7 @@ function Visual(options) {
       f.appendChild(s.el);
     }
     this.scripts = this.scripts.concat(scripts);
+    this.layout();
     this.elContents.appendChild(f);
 
     return this.dispatch('change');
