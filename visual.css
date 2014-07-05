@@ -54,6 +54,21 @@ body.Visual-workspace {
   z-index: 10001;
 }
 
+/* Scroll bar */
+
+.Visual-scroll-bar,
+.Visual-scroll-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: rgba(200, 200, 200, .7);
+  border-radius: 1000px;
+}
+
+.Visual-scroll-thumb {
+  background: rgba(80, 80, 80, .7);
+}
+
 /* Script */
 
 .Visual-script {

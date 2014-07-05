@@ -2238,6 +2238,14 @@ function Visual(options) {
     this.el.className += ' Visual-workspace Visual-no-select';
 
     this.el.appendChild(this.elContents = el('Visual-absolute'));
+    this.el.appendChild(this.elHBar = el('Visual-scroll-bar'));
+    this.elHBar.appendChild(this.elHThumb = el('Visual-scroll-thumb'));
+    this.el.appendChild(this.elVBar = el('Visual-scroll-bar'));
+    this.elVBar.appendChild(this.elVThumb = el('Visual-scroll-thumb'));
+    this.elHBar.style.height =
+    this.elHThumb.style.height = this.scrollbarSize + 'px';
+    this.elVBar.style.width =
+    this.elVThumb.style.width = this.scrollbarSize + 'px';
 
     this.scripts = [];
 
@@ -2260,9 +2268,12 @@ function Visual(options) {
 
   Workspace.prototype.paddingX = 20;
   Workspace.prototype.paddingY = 20;
-  Workspace.prototype.extraSpaceX = 100;
-  Workspace.prototype.extraSpaceY = 100;
+  Workspace.prototype.extraSpaceX = 20;
+  Workspace.prototype.extraSpaceY = 20;
   Workspace.prototype.spacing = 20;
+
+  Workspace.prototype.scrollbarInset = 3;
+  Workspace.prototype.scrollbarSize = 9;
 
   def(Workspace.prototype, 'app', {get: getApp});
   def(Workspace.prototype, 'workspace', {get: function() {return this}});
@@ -2394,7 +2405,7 @@ function Visual(options) {
   Workspace.prototype.scrollTo = function(x, y) {
     this.scrollX = Math.max(0, this.isPalette ? Math.min(this.contentWidth - this.width, x) : x);
     this.scrollY = Math.max(0, this.isPalette ? Math.min(this.contentHeight - this.height, y) : y);
-    if (!this.isPalette) this.refill();
+    this.refill();
     if (this.parent) this.parent.showAllFeedback();
     setTransform(this.elContents, 'translate('+(-this.scrollX)+'px,'+(-this.scrollY)+'px)');
     return this;
@@ -2460,14 +2471,45 @@ function Visual(options) {
   };
 
   Workspace.prototype.refill = function() {
-    var l = this.scrollX;
-    var t = this.scrollY;
-    var r = l + this.width;
-    var b = t + this.height;
+    var l = this.scrollX / this._scale;
+    var t = this.scrollY / this._scale;
+    var r = l + this.width / this._scale;
+    var b = t + this.height / this._scale;
     var scripts = this.scripts;
     for (var i = scripts.length; i--;) {
       var s = scripts[i];
       s.visible = s.x < r && s.x + s.width > l && s.y < b && s.y + s.ownHeight > t;
+    }
+    var viewportHeight = this.height;
+    var viewportWidth = this.width;
+    var hBar = false;
+    var vBar = false;
+    if (hBar = this.contentWidth > viewportWidth) {
+      viewportHeight -= this.scrollbarSize + this.scrollbarInset;
+    }
+    if (vBar = this.contentHeight > viewportHeight) {
+      viewportWidth -= this.scrollbarSize + this.scrollbarInset;
+      if (!hBar && (hBar = this.contentWidth > viewportWidth)) {
+        viewportHeight -= this.scrollbarSize + this.scrollbarInset;
+      }
+    }
+    this.elHBar.style.display = hBar ? 'block' : 'none';
+    if (hBar) {
+      var barWidth = viewportWidth - this.scrollbarInset * 2;
+      var contentWidth = Math.max(this.contentWidth, this.scrollX + viewportWidth);
+      this.elHBar.style.width = barWidth + 'px';
+      setTransform(this.elHBar, 'translate('+this.scrollbarInset+'px,'+(this.height - this.scrollbarSize - this.scrollbarInset)+'px)');
+      this.elHThumb.style.width = viewportWidth * barWidth / contentWidth + 'px';
+      setTransform(this.elHThumb, 'translate('+Math.round(Math.min(1 - viewportWidth / contentWidth, this.scrollX / contentWidth) * barWidth)+'px,0)');
+    }
+    this.elVBar.style.display = vBar ? 'block' : 'none';
+    if (vBar) {
+      var barHeight = viewportHeight - this.scrollbarInset * 2;
+      var contentHeight = Math.max(this.contentHeight, this.scrollY + viewportHeight);
+      this.elVBar.style.height = barHeight + 'px';
+      setTransform(this.elVBar, 'translate('+(this.width - this.scrollbarSize - this.scrollbarInset)+'px,'+this.scrollbarInset+'px)');
+      this.elVThumb.style.height = viewportHeight * barHeight / contentHeight + 'px';
+      setTransform(this.elVThumb, 'translate(0,'+Math.round(Math.min(1 - viewportHeight / contentHeight, this.scrollY / contentHeight) * barHeight)+'px)');
     }
   };
 
@@ -2602,10 +2644,9 @@ function Visual(options) {
     this.cy = this.paddingY;
     this.lineHeight = 0;
     this.line = [];
+    this.scrollTo(0, 0);
     return this;
   };
-
-  Palette.prototype.refill = function() {};
 
   Palette.prototype.layout = function() {
     var px = this.paddingX;
