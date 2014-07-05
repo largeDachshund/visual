@@ -1597,6 +1597,16 @@ function Visual(options) {
   def(Script.prototype, 'isReporter', {get: function() {return this.blocks.length && this.blocks[0].isReporter}});
   def(Script.prototype, 'isEmpty', {get: function() {return !this.blocks.length}});
 
+  Script.prototype._visible = true;
+  def(Script.prototype, 'visible', {
+    get: function() {return this._visible},
+    set: function(value) {
+      if (this._visible === value) return;
+      this._visible = value;
+      this.el.style.display = value ? 'block' : 'none';
+    }
+  });
+
   Script.prototype.shadow = function(offsetX, offsetY, blur, color) {
     var canvas = el('canvas', 'Visual-absolute');
     setTransform(canvas, 'translate('+(offsetX - blur * this._scale)+'px, '+(offsetY - blur * this._scale)+'px)');
@@ -2231,7 +2241,6 @@ function Visual(options) {
     this.el = host;
     this.el.className += ' Visual-workspace Visual-no-select';
 
-    this.el.appendChild(this.fill = el('Visual-absolute'));
     this.el.appendChild(this.elContents = el('Visual-absolute'));
 
     this.scripts = [];
@@ -2239,10 +2248,8 @@ function Visual(options) {
     if (host.tagName === 'BODY' && host.parentNode) {
       host.parentNode.style.height = '100%';
       window.addEventListener('resize', this.resize.bind(this));
-      window.addEventListener('scroll', this.scroll.bind(this));
-    } else {
-      this.el.addEventListener('scroll', this.scroll.bind(this));
     }
+    this.el.addEventListener('wheel', this.wheel.bind(this));
 
     this.resize();
     this.layout();
@@ -2360,26 +2367,39 @@ function Visual(options) {
     return this;
   };
 
-  Workspace.prototype.scrollTo = function(x, y) {
-    if (this.el === document.body) {
-      window.scrollX = x || 0;
-      window.scrollY = y || 0;
-    } else {
-      this.el.scrollLeft = x || 0;
-      this.el.scrollTop = y || 0;
+  var DELTA_PIXEL = 0;
+  var DELTA_LINE = 1;
+  var DELTA_PAGE = 2;
+
+  Workspace.prototype.wheel = function(e) {
+    e.preventDefault();
+    switch (e.deltaMode) {
+      case DELTA_PIXEL:
+        var dx = e.deltaX;
+        var dy = e.deltaY;
+        break;
+      case DELTA_LINE:
+        dx = e.deltaX * 30;
+        dy = e.deltaY * 30;
+        break;
+      case DELTA_PAGE:
+        dx = e.deltaX * this.width;
+        dy = e.deltaY * this.height;
+        break;
     }
-    this.scroll();
+    this.scrollBy(dx, dy);
   };
 
-  Workspace.prototype.scroll = function() {
-    if (this.el === document.body) {
-      this.scrollX = window.scrollX;
-      this.scrollY = window.scrollY;
-    } else {
-      this.scrollX = this.el.scrollLeft;
-      this.scrollY = this.el.scrollTop;
-    }
+  Workspace.prototype.scrollBy = function(x, y) {
+    return this.scrollTo(this.scrollX + x, this.scrollY + y);
+  };
+
+  Workspace.prototype.scrollTo = function(x, y) {
+    this.scrollX = Math.max(0, this.isPalette ? Math.min(this.contentWidth - this.width, x) : x);
+    this.scrollY = Math.max(0, this.isPalette ? Math.min(this.contentHeight - this.height, y) : y);
     if (!this.isPalette) this.refill();
+    setTransform(this.elContents, 'translate('+(-this.scrollX)+'px,'+(-this.scrollY)+'px)');
+    return this;
   };
 
   Workspace.prototype.layout = function() {
@@ -2442,11 +2462,15 @@ function Visual(options) {
   };
 
   Workspace.prototype.refill = function() {
-    var vw = this.width + this.scrollX + this.extraSpaceX;
-    var vh = this.height + this.scrollY + this.extraSpaceY;
-
-    this.fill.style.width = Math.max(this.contentWidth * this._scale, vw) + 'px';
-    this.fill.style.height = Math.max(this.contentHeight * this._scale, vh) + 'px';
+    var l = this.scrollX;
+    var t = this.scrollY;
+    var r = l + this.width;
+    var b = t + this.height;
+    var scripts = this.scripts;
+    for (var i = scripts.length; i--;) {
+      var s = scripts[i];
+      s.visible = s.x < r && s.x + s.width > l && s.y < b && s.y + s.ownHeight > t;
+    }
   };
 
   Workspace.prototype.cleanUp = function() {
@@ -2583,10 +2607,7 @@ function Visual(options) {
     return this;
   };
 
-  Palette.prototype.refill = function() {
-    this.fill.style.width = this.contentWidth * this._scale + 'px';
-    this.fill.style.height = this.contentHeight * this._scale + 'px';
-  };
+  Palette.prototype.refill = function() {};
 
   Palette.prototype.layout = function() {
     var px = this.paddingX;

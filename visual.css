@@ -35,7 +35,7 @@
 .Visual-workspace {
   position: relative;
   cursor: default;
-  overflow: auto;
+  overflow: hidden;
 }
 
 body.Visual-workspace {
