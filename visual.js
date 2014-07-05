@@ -2399,6 +2399,7 @@ function Visual(options) {
     this.scrollX = Math.max(0, this.isPalette ? Math.min(this.contentWidth - this.width, x) : x);
     this.scrollY = Math.max(0, this.isPalette ? Math.min(this.contentHeight - this.height, y) : y);
     if (!this.isPalette) this.refill();
+    if (this.parent) this.parent.showAllFeedback();
     setTransform(this.elContents, 'translate('+(-this.scrollX)+'px,'+(-this.scrollY)+'px)');
     return this;
   };
@@ -3203,6 +3204,14 @@ function Visual(options) {
         }
         return;
     }
+  };
+
+  App.prototype.showAllFeedback = function() {
+    var g = this.gestures;
+    for (var k in g) if (hasOwnProperty.call(g, k)) {
+      this.showFeedback(g[k]);
+    }
+    if (this.dragScript) this.showFeedback(this);
   };
 
   App.prototype.showFeedback = function(g) {
