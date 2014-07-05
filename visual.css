@@ -80,6 +80,7 @@ body.Visual-workspace {
   border: 0;
   background: 0;
   outline: 0;
+  box-shadow: none;
 }
 .Visual-field:focus {
   pointer-events: auto;
