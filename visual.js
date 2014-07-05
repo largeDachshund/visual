@@ -2969,7 +2969,7 @@ function Visual(options) {
     }
     var feedback = el('canvas', 'Visual-absolute Visual-feedback');
     var feedbackContext = feedback.getContext('2d');
-    feedback.style.visibility = 'hidden';
+    feedback.style.display = 'none';
     document.body.appendChild(feedback);
     return feedbackContext;
   };
@@ -3142,7 +3142,7 @@ function Visual(options) {
     this.elScripts.removeChild(g.dragScript.el);
     g.dragScript.parent = null;
     g.dragScript.removeShadow();
-    g.feedback.canvas.style.visibility = 'hidden';
+    g.feedback.canvas.style.display = 'none';
 
     var handled = false;
     if (g.feedbackInfo) {
@@ -3225,12 +3225,12 @@ function Visual(options) {
     }
     if (g.feedbackInfo) {
       this.renderFeedback(g);
-      g.feedback.canvas.style.visibility = 'visible';
+      g.feedback.canvas.style.display = 'block';
     } else {
       if (g.dropWorkspace && g.dropWorkspace.isTarget) {
         g.dropWorkspace.showFeedback(g.dragScript);
       }
-      g.feedback.canvas.style.visibility = 'hidden';
+      g.feedback.canvas.style.display = 'none';
     }
   };
 
