@@ -2272,7 +2272,7 @@ function Visual(options) {
   Workspace.prototype.extraSpaceY = 20;
   Workspace.prototype.spacing = 20;
 
-  Workspace.prototype.scrollbarInset = 3;
+  Workspace.prototype.scrollbarInset = 2;
   Workspace.prototype.scrollbarSize = 9;
 
   def(Workspace.prototype, 'app', {get: getApp});
