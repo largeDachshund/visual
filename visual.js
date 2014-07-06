@@ -2495,8 +2495,8 @@ function Visual(options) {
       var s = scripts[i];
       s.visible = s.x < r && s.x + s.width > l && s.y < b && s.y + s.ownHeight > t;
     }
-    var hBar = this.contentWidth > this.width;
-    var vBar = this.contentHeight > this.height;
+    var hBar = this.scrollX || this.contentWidth > this.width;
+    var vBar = this.scrollY || this.contentHeight > this.height;
     this.elHBar.style.display = hBar ? 'block' : 'none';
     if (hBar) {
       var barWidth = this.width - this.scrollbarInset * 2 - (vBar ? this.scrollbarSize + this.scrollbarInset : 0);
