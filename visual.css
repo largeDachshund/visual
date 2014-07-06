@@ -65,6 +65,15 @@ body.Visual-workspace {
   border-radius: 1000px;
 }
 
+.Visual-scroll-bar-hidden {
+  opacity: 0;
+  -webkit-transition: opacity .5s;
+  -moz-transition: opacity .5s;
+  -ms-transition: opacity .5s;
+  -o-transition: opacity .5s;
+  transition: opacity .5s;
+}
+
 .Visual-scroll-thumb {
   background: rgba(70, 70, 70, .7);
 }
