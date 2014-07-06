@@ -524,6 +524,14 @@ function Visual(options) {
     set: function(value) {
       this._spec = value;
 
+      if (this.parts) {
+        var i = this.parts.length;
+        while (i--) {
+          this.el.removeChild(this.parts[i].el);
+          this.parts[i].parent = null;
+        }
+      }
+
       var args = this.args || [];
       this.inputs = [];
       this.args = [];
