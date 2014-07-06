@@ -2489,8 +2489,7 @@ function Visual(options) {
   Workspace.prototype.resize = function() {
     this.width = this.el.offsetWidth;
     this.height = this.el.offsetHeight;
-    this.refill();
-    this.showScrollbars();
+    this.scrollBy(0, 0);
   };
 
   Workspace.prototype.refill = function() {
