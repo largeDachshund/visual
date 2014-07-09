@@ -843,6 +843,7 @@ function Visual(options) {
   Block.prototype.partPadding = 4;
   Block.prototype.lineSpacing = 2;
   Block.prototype.scriptPadding = 15;
+  Block.prototype.blockOffsetY = 1;
 
   Block.prototype.minDistance = function(part) {
     if (this.isBoolean) {
@@ -924,7 +925,7 @@ function Visual(options) {
       } else {
         for (var j = 0, l = line.length; j < l; j++) {
           var p = line[j];
-          p.moveTo(xp + xs[j], y + ((lh - p.height) / 2 | 0) - (p.isBlock ? 1 : 0));
+          p.moveTo(xp + xs[j], y + ((lh - p.height) / 2 | 0) - (p.isBlock ? this.blockOffsetY : 0));
         }
       }
       y += lh + ls;
