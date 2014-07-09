@@ -2254,6 +2254,8 @@ function Visual(options) {
     this.elHThumb.style.height = this.scrollbarSize + 'px';
     this.elVBar.style.width =
     this.elVThumb.style.width = this.scrollbarSize + 'px';
+    this.hasHBar =
+    this.hasVBar = true;
 
     this.scripts = [];
 
@@ -2504,7 +2506,10 @@ function Visual(options) {
     }
     var hBar = this.scrollX || this.contentWidth > this.width;
     var vBar = this.scrollY || this.contentHeight > this.height;
-    this.elHBar.style.display = hBar ? 'block' : 'none';
+    if (this.hasHBar !== hBar) {
+      this.elHBar.style.display = hBar ? 'block' : 'none';
+      this.hasHBar = hBar;
+    }
     if (hBar) {
       var barWidth = this.width - this.scrollbarInset * 2 - (vBar ? this.scrollbarSize + this.scrollbarInset : 0);
       var contentWidth = Math.max(this.contentWidth, this.scrollX + this.width);
@@ -2513,7 +2518,10 @@ function Visual(options) {
       this.elHThumb.style.width = this.width * barWidth / contentWidth + 'px';
       setTransform(this.elHThumb, 'translate('+Math.round(Math.min(1 - this.width / contentWidth, this.scrollX / contentWidth) * barWidth)+'px,0)');
     }
-    this.elVBar.style.display = vBar ? 'block' : 'none';
+    if (this.hasVBar !== vBar) {
+      this.elVBar.style.display = vBar ? 'block' : 'none';
+      this.hasVBar = vBar;
+    }
     if (vBar) {
       var barHeight = this.height - this.scrollbarInset * 2 - (hBar ? this.scrollbarSize + this.scrollbarInset : 0);
       var contentHeight = Math.max(this.contentHeight, this.scrollY + this.height);
