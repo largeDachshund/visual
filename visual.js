@@ -2266,8 +2266,8 @@ function Visual(options) {
     this.el.addEventListener('wheel', this.wheel.bind(this));
 
     this.hideScrollbars = this.hideScrollbars.bind(this);
-    this.resize();
     this.layout();
+    this.resize();
   }
 
   Workspace.prototype.isWorkspace = true;
