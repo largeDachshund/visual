@@ -2264,7 +2264,11 @@ function Visual(options) {
       host.parentNode.style.height = '100%';
       window.addEventListener('resize', this.resize.bind(this));
     }
-    this.el.addEventListener('wheel', this.wheel.bind(this));
+    if ('onwheel' in this.el) {
+      this.el.addEventListener('wheel', this.wheel.bind(this));
+    } else if ('onmousewheel' in this.el) {
+      this.el.addEventListener('mousewheel', this.mouseWheel.bind(this));
+    }
 
     this.hideScrollbars = this.hideScrollbars.bind(this);
     this.layout();
@@ -2408,6 +2412,11 @@ function Visual(options) {
         break;
     }
     this.scrollBy(dx, dy);
+  };
+
+  Workspace.prototype.mouseWheel = function(e) {
+    e.preventDefault();
+    this.scrollBy(-e.wheelDeltaX / 3, -e.wheelDeltaY / 3);
   };
 
   Workspace.prototype.showScrollbars = function() {
