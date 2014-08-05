@@ -2266,10 +2266,10 @@ function Visual(options) {
   Workspace.prototype.scrollX = 0;
   Workspace.prototype.scrollY = 0;
 
-  Workspace.prototype.paddingX = 20;
-  Workspace.prototype.paddingY = 20;
-  Workspace.prototype.extraSpaceX = 100;
-  Workspace.prototype.extraSpaceY = 100;
+  Workspace.prototype.paddingLeft = 20;
+  Workspace.prototype.paddingTop = 20;
+  Workspace.prototype.paddingRight = 100;
+  Workspace.prototype.paddingBottom = 100;
   Workspace.prototype.spacing = 20;
 
   def(Workspace.prototype, 'app', {get: getApp});
@@ -2350,8 +2350,8 @@ function Visual(options) {
       s.parent = null;
     }
     this.scripts = [];
-    this.contentWidth = this.paddingX + this.extraSpaceX;
-    this.contentHeight = this.paddingY + this.extraSpaceY;
+    this.contentWidth = this.paddingLeft + this.paddingRight;
+    this.contentHeight = this.paddingTop + this.paddingBottom;
     this.refill();
     return this.dispatch('change');
   };
@@ -2408,8 +2408,8 @@ function Visual(options) {
   };
 
   Workspace.prototype.layout = function() {
-    var px = this.paddingX;
-    var py = this.paddingY;
+    var px = this.paddingLeft;
+    var py = this.paddingTop;
     var x = px;
     var y = py;
     var width = 0;
@@ -2442,8 +2442,8 @@ function Visual(options) {
       height += y;
     }
 
-    width += this.extraSpaceX;
-    height += this.extraSpaceY;
+    width += this.paddingRight;
+    height += this.paddingBottom;
 
     this.contentWidth = width;
     this.contentHeight = height;
@@ -2470,8 +2470,8 @@ function Visual(options) {
     var w = this.contentWidth;
     var h = this.contentHeight;
     if (!this.isPalette) {
-      w = Math.max(w, this.scrollX + this.width + this.extraSpaceX);
-      h = Math.max(h, this.scrollY + this.height + this.extraSpaceY);
+      w = Math.max(w, this.scrollX + this.width + this.paddingRight);
+      h = Math.max(h, this.scrollY + this.height + this.paddingBottom);
     }
     this.elContents.style.width = w+'px';
     this.elContents.style.height = h+'px';
@@ -2483,11 +2483,11 @@ function Visual(options) {
     scripts.sort(function(a, b) {
       return a.y - b.y;
     });
-    var y = this.paddingY;
+    var y = this.paddingTop;
     var length = scripts.length;
     for (var i = 0; i < length; i++) {
       var s = scripts[i];
-      s.moveTo(this.paddingX, y);
+      s.moveTo(this.paddingLeft, y);
       y += s.height + this.spacing;
     }
     this.layout();
@@ -2503,8 +2503,8 @@ function Visual(options) {
   function Palette(host) {
     Workspace.call(this, host);
 
-    this.cx = this.paddingX;
-    this.cy = this.paddingY;
+    this.cx = this.paddingLeft;
+    this.cy = this.paddingTop;
     this.lineHeight = 0;
     this.line = [];
   }
@@ -2528,10 +2528,10 @@ function Visual(options) {
   Palette.prototype.constructor = Palette;
 
   Palette.prototype.isPalette = true;
-  Palette.prototype.paddingX = 10;
-  Palette.prototype.paddingY = 10;
-  Palette.prototype.extraSpaceX = 10;
-  Palette.prototype.extraSpaceY = 10;
+  Palette.prototype.paddingLeft = 10;
+  Palette.prototype.paddingTop = 10;
+  Palette.prototype.paddingRight = 10;
+  Palette.prototype.paddingBottom = 10;
   Palette.prototype.spacing = 7;
   Palette.prototype.spaceSize = 24;
 
@@ -2553,7 +2553,7 @@ function Visual(options) {
       script.layoutChildren();
       script.drawChildren();
       this.lineHeight = Math.max(this.lineHeight, script.ownHeight);
-      this.contentWidth = Math.max(this.contentWidth, this.cx + script.ownWidth + this.extraSpaceX);
+      this.contentWidth = Math.max(this.contentWidth, this.cx + script.ownWidth + this.paddingRight);
       if (script.isInline) {
         this.line.push(script);
         this.cx += script.ownWidth + this.spacing;
@@ -2568,11 +2568,11 @@ function Visual(options) {
     }
 
     if (!script.isInline) {
-      this.cx = this.paddingX;
+      this.cx = this.paddingLeft;
       this.lineHeight = 0;
       this.line = [];
     }
-    this.contentHeight = this.cy + this.lineHeight + this.extraSpaceY;
+    this.contentHeight = this.cy + this.lineHeight + this.paddingBottom;
 
     this.refill();
     return this.dispatch('change');
@@ -2605,8 +2605,8 @@ function Visual(options) {
 
   Palette.prototype.clear = function() {
     Workspace.prototype.clear.call(this);
-    this.cx = this.paddingX;
-    this.cy = this.paddingY;
+    this.cx = this.paddingLeft;
+    this.cy = this.paddingTop;
     this.lineHeight = 0;
     this.line = [];
     this.scrollTo(0, 0);
@@ -2614,8 +2614,8 @@ function Visual(options) {
   };
 
   Palette.prototype.layout = function() {
-    var px = this.paddingX;
-    var py = this.paddingY;
+    var px = this.paddingLeft;
+    var py = this.paddingTop;
     var sp = this.spacing;
 
     var y = py;
@@ -2662,8 +2662,8 @@ function Visual(options) {
     this.cx = x;
     this.cy = y;
 
-    this.contentHeight = y + lh + this.extraSpaceY;
-    this.contentWidth = w + this.extraSpaceX;
+    this.contentHeight = y + lh + this.paddingBottom;
+    this.contentWidth = w + this.paddingRight;
     this.refill();
   };
 
