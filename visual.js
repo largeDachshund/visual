@@ -2268,8 +2268,8 @@ function Visual(options) {
 
   Workspace.prototype.paddingX = 20;
   Workspace.prototype.paddingY = 20;
-  Workspace.prototype.extraSpaceX = 20;
-  Workspace.prototype.extraSpaceY = 20;
+  Workspace.prototype.extraSpaceX = 100;
+  Workspace.prototype.extraSpaceY = 100;
   Workspace.prototype.spacing = 20;
 
   def(Workspace.prototype, 'app', {get: getApp});
