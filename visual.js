@@ -2372,34 +2372,6 @@ function Visual(options) {
     return this;
   };
 
-  var DELTA_PIXEL = 0;
-  var DELTA_LINE = 1;
-  var DELTA_PAGE = 2;
-
-  Workspace.prototype.wheel = function(e) {
-    e.preventDefault();
-    switch (e.deltaMode) {
-      case DELTA_PIXEL:
-        var dx = e.deltaX;
-        var dy = e.deltaY;
-        break;
-      case DELTA_LINE:
-        dx = e.deltaX * 30;
-        dy = e.deltaY * 30;
-        break;
-      case DELTA_PAGE:
-        dx = e.deltaX * this.width;
-        dy = e.deltaY * this.height;
-        break;
-    }
-    this.scrollBy(dx, dy);
-  };
-
-  Workspace.prototype.mouseWheel = function(e) {
-    e.preventDefault();
-    this.scrollBy(-e.wheelDeltaX / 3, -e.wheelDeltaY / 3);
-  };
-
   Workspace.prototype.scrollBy = function(x, y) {
     return this.scrollTo(this.scrollX + x, this.scrollY + y);
   };
