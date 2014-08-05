@@ -43,6 +43,19 @@ body.Visual-workspace {
   margin: 0;
 }
 
+.Visual-workspace::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+.Visual-workspace::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+.Visual-workspace::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .Visual-feedback {
   position: fixed;
   z-index: 10000;
