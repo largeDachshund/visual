@@ -44,8 +44,8 @@ body.Visual-workspace {
 }
 
 .Visual-workspace::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
 }
 .Visual-workspace::-webkit-scrollbar-thumb {
   background: #888;
