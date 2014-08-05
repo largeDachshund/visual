@@ -2245,18 +2245,7 @@ function Visual(options) {
   function Workspace(host) {
     this.el = host;
     this.el.className += ' Visual-workspace Visual-no-select';
-
     this.el.appendChild(this.elContents = el('Visual-absolute'));
-    this.el.appendChild(this.elHBar = el('Visual-scroll-bar'));
-    this.elHBar.appendChild(this.elHThumb = el('Visual-scroll-thumb'));
-    this.el.appendChild(this.elVBar = el('Visual-scroll-bar'));
-    this.elVBar.appendChild(this.elVThumb = el('Visual-scroll-thumb'));
-    this.elHBar.style.height =
-    this.elHThumb.style.height = this.scrollbarSize + 'px';
-    this.elVBar.style.width =
-    this.elVThumb.style.width = this.scrollbarSize + 'px';
-    this.hasHBar =
-    this.hasVBar = true;
 
     this.scripts = [];
 
@@ -2264,13 +2253,8 @@ function Visual(options) {
       host.parentNode.style.height = '100%';
       window.addEventListener('resize', this.resize.bind(this));
     }
-    if ('onwheel' in this.el) {
-      this.el.addEventListener('wheel', this.wheel.bind(this));
-    } else if ('onmousewheel' in this.el) {
-      this.el.addEventListener('mousewheel', this.mouseWheel.bind(this));
-    }
+    this.el.addEventListener('scroll', this.onScroll.bind(this));
 
-    this.hideScrollbars = this.hideScrollbars.bind(this);
     this.layout();
     this.resize();
   }
@@ -2287,9 +2271,6 @@ function Visual(options) {
   Workspace.prototype.extraSpaceX = 20;
   Workspace.prototype.extraSpaceY = 20;
   Workspace.prototype.spacing = 20;
-
-  Workspace.prototype.scrollbarInset = 2;
-  Workspace.prototype.scrollbarSize = 8;
 
   def(Workspace.prototype, 'app', {get: getApp});
   def(Workspace.prototype, 'workspace', {get: function() {return this}});
@@ -2419,30 +2400,39 @@ function Visual(options) {
     this.scrollBy(-e.wheelDeltaX / 3, -e.wheelDeltaY / 3);
   };
 
-  Workspace.prototype.showScrollbars = function() {
-    this.elHBar.classList.remove('Visual-scroll-bar-hidden');
-    this.elVBar.classList.remove('Visual-scroll-bar-hidden');
-    clearTimeout(this.hideScrollbarTimeout);
-    this.hideScrollbarTimeout = setTimeout(this.hideScrollbars, 500);
-  };
-
-  Workspace.prototype.hideScrollbars = function() {
-    this.elHBar.classList.add('Visual-scroll-bar-hidden');
-    this.elVBar.classList.add('Visual-scroll-bar-hidden');
-  };
-
   Workspace.prototype.scrollBy = function(x, y) {
     return this.scrollTo(this.scrollX + x, this.scrollY + y);
   };
 
   Workspace.prototype.scrollTo = function(x, y) {
-    this.scrollX = Math.max(0, this.isPalette ? Math.min(this.contentWidth - this.width, x) : x);
-    this.scrollY = Math.max(0, this.isPalette ? Math.min(this.contentHeight - this.height, y) : y);
-    this.refill();
-    this.showScrollbars();
+    this.el.scrollLeft = this.scrollX = Math.max(0, this.isPalette ? Math.min(this.contentWidth - this.width, x) : x);
+    this.el.scrollTop = this.scrollY = Math.max(0, this.isPalette ? Math.min(this.contentHeight - this.height, y) : y);
+    this.updateVisibility();
     if (this.parent) this.parent.showAllFeedback();
-    setTransform(this.elContents, 'translate('+(-this.scrollX)+'px,'+(-this.scrollY)+'px)');
     return this;
+  };
+
+  Workspace.prototype.onScroll = function() {
+    this.scrollX = this.el.scrollLeft;
+    this.scrollY = this.el.scrollTop;
+    if (this.isPalette) {
+      this.updateVisibility();
+    } else {
+      this.refill();
+    }
+    return this;
+  };
+
+  Workspace.prototype.updateVisibility = function() {
+    var l = this.scrollX / this._scale;
+    var t = this.scrollY / this._scale;
+    var r = l + this.width / this._scale;
+    var b = t + this.height / this._scale;
+    var scripts = this.scripts;
+    for (var i = scripts.length; i--;) {
+      var s = scripts[i];
+      s.visible = s.x < r && s.x + s.width > l && s.y < b && s.y + s.ownHeight > t;
+    }
   };
 
   Workspace.prototype.layout = function() {
@@ -2501,45 +2491,19 @@ function Visual(options) {
   Workspace.prototype.resize = function() {
     this.width = this.el.offsetWidth;
     this.height = this.el.offsetHeight;
-    this.scrollBy(0, 0);
+    this.refill();
   };
 
   Workspace.prototype.refill = function() {
-    var l = this.scrollX / this._scale;
-    var t = this.scrollY / this._scale;
-    var r = l + this.width / this._scale;
-    var b = t + this.height / this._scale;
-    var scripts = this.scripts;
-    for (var i = scripts.length; i--;) {
-      var s = scripts[i];
-      s.visible = s.x < r && s.x + s.width > l && s.y < b && s.y + s.ownHeight > t;
+    var w = this.contentWidth;
+    var h = this.contentHeight;
+    if (!this.isPalette) {
+      w = Math.max(w, this.scrollX + this.width + this.extraSpaceX);
+      h = Math.max(h, this.scrollY + this.height + this.extraSpaceY);
     }
-    var hBar = this.scrollX || this.contentWidth > this.width;
-    var vBar = this.scrollY || this.contentHeight > this.height;
-    if (this.hasHBar !== hBar) {
-      this.elHBar.style.display = hBar ? 'block' : 'none';
-      this.hasHBar = hBar;
-    }
-    if (hBar) {
-      var barWidth = this.width - this.scrollbarInset * 2 - (vBar ? this.scrollbarSize + this.scrollbarInset : 0);
-      var contentWidth = Math.max(this.contentWidth, this.scrollX + this.width);
-      this.elHBar.style.width = barWidth + 'px';
-      setTransform(this.elHBar, 'translate('+this.scrollbarInset+'px,'+(this.height - this.scrollbarSize - this.scrollbarInset)+'px)');
-      this.elHThumb.style.width = this.width * barWidth / contentWidth + 'px';
-      setTransform(this.elHThumb, 'translate('+Math.round(Math.min(1 - this.width / contentWidth, this.scrollX / contentWidth) * barWidth)+'px,0)');
-    }
-    if (this.hasVBar !== vBar) {
-      this.elVBar.style.display = vBar ? 'block' : 'none';
-      this.hasVBar = vBar;
-    }
-    if (vBar) {
-      var barHeight = this.height - this.scrollbarInset * 2 - (hBar ? this.scrollbarSize + this.scrollbarInset : 0);
-      var contentHeight = Math.max(this.contentHeight, this.scrollY + this.height);
-      this.elVBar.style.height = barHeight + 'px';
-      setTransform(this.elVBar, 'translate('+(this.width - this.scrollbarSize - this.scrollbarInset)+'px,'+this.scrollbarInset+'px)');
-      this.elVThumb.style.height = this.height * barHeight / contentHeight + 'px';
-      setTransform(this.elVThumb, 'translate(0,'+Math.round(Math.min(1 - this.height / contentHeight, this.scrollY / contentHeight) * barHeight)+'px)');
-    }
+    this.elContents.style.width = w+'px';
+    this.elContents.style.height = h+'px';
+    this.updateVisibility();
   };
 
   Workspace.prototype.cleanUp = function() {

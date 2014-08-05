@@ -35,7 +35,7 @@
 .Visual-workspace {
   position: relative;
   cursor: default;
-  overflow: hidden;
+  overflow: auto;
 }
 
 body.Visual-workspace {
@@ -52,30 +52,6 @@ body.Visual-workspace {
 .Visual-dragging {
   position: fixed;
   z-index: 10001;
-}
-
-/* Scroll bar */
-
-.Visual-scroll-bar,
-.Visual-scroll-thumb {
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: rgba(200, 200, 200, .7);
-  border-radius: 1000px;
-}
-
-.Visual-scroll-bar-hidden {
-  opacity: 0;
-  -webkit-transition: opacity .5s;
-  -moz-transition: opacity .5s;
-  -ms-transition: opacity .5s;
-  -o-transition: opacity .5s;
-  transition: opacity .5s;
-}
-
-.Visual-scroll-thumb {
-  background: rgba(70, 70, 70, .7);
 }
 
 /* Script */
