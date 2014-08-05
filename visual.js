@@ -2245,18 +2245,7 @@ function Visual(options) {
   function Workspace(host) {
     this.el = host;
     this.el.className += ' Visual-workspace Visual-no-select';
-
     this.el.appendChild(this.elContents = el('Visual-absolute'));
-    this.el.appendChild(this.elHBar = el('Visual-scroll-bar'));
-    this.elHBar.appendChild(this.elHThumb = el('Visual-scroll-thumb'));
-    this.el.appendChild(this.elVBar = el('Visual-scroll-bar'));
-    this.elVBar.appendChild(this.elVThumb = el('Visual-scroll-thumb'));
-    this.elHBar.style.height =
-    this.elHThumb.style.height = this.scrollbarSize + 'px';
-    this.elVBar.style.width =
-    this.elVThumb.style.width = this.scrollbarSize + 'px';
-    this.hasHBar =
-    this.hasVBar = true;
 
     this.scripts = [];
 
@@ -2264,13 +2253,8 @@ function Visual(options) {
       host.parentNode.style.height = '100%';
       window.addEventListener('resize', this.resize.bind(this));
     }
-    if ('onwheel' in this.el) {
-      this.el.addEventListener('wheel', this.wheel.bind(this));
-    } else if ('onmousewheel' in this.el) {
-      this.el.addEventListener('mousewheel', this.mouseWheel.bind(this));
-    }
+    this.el.addEventListener('scroll', this.onScroll.bind(this));
 
-    this.hideScrollbars = this.hideScrollbars.bind(this);
     this.layout();
     this.resize();
   }
@@ -2282,14 +2266,11 @@ function Visual(options) {
   Workspace.prototype.scrollX = 0;
   Workspace.prototype.scrollY = 0;
 
-  Workspace.prototype.paddingX = 20;
-  Workspace.prototype.paddingY = 20;
-  Workspace.prototype.extraSpaceX = 20;
-  Workspace.prototype.extraSpaceY = 20;
+  Workspace.prototype.paddingLeft = 20;
+  Workspace.prototype.paddingTop = 20;
+  Workspace.prototype.paddingRight = 100;
+  Workspace.prototype.paddingBottom = 100;
   Workspace.prototype.spacing = 20;
-
-  Workspace.prototype.scrollbarInset = 2;
-  Workspace.prototype.scrollbarSize = 8;
 
   def(Workspace.prototype, 'app', {get: getApp});
   def(Workspace.prototype, 'workspace', {get: function() {return this}});
@@ -2369,8 +2350,8 @@ function Visual(options) {
       s.parent = null;
     }
     this.scripts = [];
-    this.contentWidth = this.paddingX + this.extraSpaceX;
-    this.contentHeight = this.paddingY + this.extraSpaceY;
+    this.contentWidth = this.paddingLeft + this.paddingRight;
+    this.contentHeight = this.paddingTop + this.paddingBottom;
     this.refill();
     return this.dispatch('change');
   };
@@ -2391,63 +2372,44 @@ function Visual(options) {
     return this;
   };
 
-  var DELTA_PIXEL = 0;
-  var DELTA_LINE = 1;
-  var DELTA_PAGE = 2;
-
-  Workspace.prototype.wheel = function(e) {
-    e.preventDefault();
-    switch (e.deltaMode) {
-      case DELTA_PIXEL:
-        var dx = e.deltaX;
-        var dy = e.deltaY;
-        break;
-      case DELTA_LINE:
-        dx = e.deltaX * 30;
-        dy = e.deltaY * 30;
-        break;
-      case DELTA_PAGE:
-        dx = e.deltaX * this.width;
-        dy = e.deltaY * this.height;
-        break;
-    }
-    this.scrollBy(dx, dy);
-  };
-
-  Workspace.prototype.mouseWheel = function(e) {
-    e.preventDefault();
-    this.scrollBy(-e.wheelDeltaX / 3, -e.wheelDeltaY / 3);
-  };
-
-  Workspace.prototype.showScrollbars = function() {
-    this.elHBar.classList.remove('Visual-scroll-bar-hidden');
-    this.elVBar.classList.remove('Visual-scroll-bar-hidden');
-    clearTimeout(this.hideScrollbarTimeout);
-    this.hideScrollbarTimeout = setTimeout(this.hideScrollbars, 500);
-  };
-
-  Workspace.prototype.hideScrollbars = function() {
-    this.elHBar.classList.add('Visual-scroll-bar-hidden');
-    this.elVBar.classList.add('Visual-scroll-bar-hidden');
-  };
-
   Workspace.prototype.scrollBy = function(x, y) {
     return this.scrollTo(this.scrollX + x, this.scrollY + y);
   };
 
   Workspace.prototype.scrollTo = function(x, y) {
-    this.scrollX = Math.max(0, this.isPalette ? Math.min(this.contentWidth - this.width, x) : x);
-    this.scrollY = Math.max(0, this.isPalette ? Math.min(this.contentHeight - this.height, y) : y);
-    this.refill();
-    this.showScrollbars();
+    this.el.scrollLeft = this.scrollX = Math.max(0, this.isPalette ? Math.min(this.contentWidth - this.width, x) : x);
+    this.el.scrollTop = this.scrollY = Math.max(0, this.isPalette ? Math.min(this.contentHeight - this.height, y) : y);
+    this.updateVisibility();
     if (this.parent) this.parent.showAllFeedback();
-    setTransform(this.elContents, 'translate('+(-this.scrollX)+'px,'+(-this.scrollY)+'px)');
     return this;
   };
 
+  Workspace.prototype.onScroll = function() {
+    this.scrollX = this.el.scrollLeft;
+    this.scrollY = this.el.scrollTop;
+    if (this.isPalette) {
+      this.updateVisibility();
+    } else {
+      this.refill();
+    }
+    return this;
+  };
+
+  Workspace.prototype.updateVisibility = function() {
+    var l = this.scrollX / this._scale;
+    var t = this.scrollY / this._scale;
+    var r = l + this.width / this._scale;
+    var b = t + this.height / this._scale;
+    var scripts = this.scripts;
+    for (var i = scripts.length; i--;) {
+      var s = scripts[i];
+      s.visible = s.x < r && s.x + s.width > l && s.y < b && s.y + s.ownHeight > t;
+    }
+  };
+
   Workspace.prototype.layout = function() {
-    var px = this.paddingX;
-    var py = this.paddingY;
+    var px = this.paddingLeft;
+    var py = this.paddingTop;
     var x = px;
     var y = py;
     var width = 0;
@@ -2480,8 +2442,8 @@ function Visual(options) {
       height += y;
     }
 
-    width += this.extraSpaceX;
-    height += this.extraSpaceY;
+    width += this.paddingRight;
+    height += this.paddingBottom;
 
     this.contentWidth = width;
     this.contentHeight = height;
@@ -2501,45 +2463,19 @@ function Visual(options) {
   Workspace.prototype.resize = function() {
     this.width = this.el.offsetWidth;
     this.height = this.el.offsetHeight;
-    this.scrollBy(0, 0);
+    this.refill();
   };
 
   Workspace.prototype.refill = function() {
-    var l = this.scrollX / this._scale;
-    var t = this.scrollY / this._scale;
-    var r = l + this.width / this._scale;
-    var b = t + this.height / this._scale;
-    var scripts = this.scripts;
-    for (var i = scripts.length; i--;) {
-      var s = scripts[i];
-      s.visible = s.x < r && s.x + s.width > l && s.y < b && s.y + s.ownHeight > t;
+    var w = this.contentWidth;
+    var h = this.contentHeight;
+    if (!this.isPalette) {
+      w = Math.max(w, this.scrollX + this.width + this.paddingRight);
+      h = Math.max(h, this.scrollY + this.height + this.paddingBottom);
     }
-    var hBar = this.scrollX || this.contentWidth > this.width;
-    var vBar = this.scrollY || this.contentHeight > this.height;
-    if (this.hasHBar !== hBar) {
-      this.elHBar.style.display = hBar ? 'block' : 'none';
-      this.hasHBar = hBar;
-    }
-    if (hBar) {
-      var barWidth = this.width - this.scrollbarInset * 2 - (vBar ? this.scrollbarSize + this.scrollbarInset : 0);
-      var contentWidth = Math.max(this.contentWidth, this.scrollX + this.width);
-      this.elHBar.style.width = barWidth + 'px';
-      setTransform(this.elHBar, 'translate('+this.scrollbarInset+'px,'+(this.height - this.scrollbarSize - this.scrollbarInset)+'px)');
-      this.elHThumb.style.width = this.width * barWidth / contentWidth + 'px';
-      setTransform(this.elHThumb, 'translate('+Math.round(Math.min(1 - this.width / contentWidth, this.scrollX / contentWidth) * barWidth)+'px,0)');
-    }
-    if (this.hasVBar !== vBar) {
-      this.elVBar.style.display = vBar ? 'block' : 'none';
-      this.hasVBar = vBar;
-    }
-    if (vBar) {
-      var barHeight = this.height - this.scrollbarInset * 2 - (hBar ? this.scrollbarSize + this.scrollbarInset : 0);
-      var contentHeight = Math.max(this.contentHeight, this.scrollY + this.height);
-      this.elVBar.style.height = barHeight + 'px';
-      setTransform(this.elVBar, 'translate('+(this.width - this.scrollbarSize - this.scrollbarInset)+'px,'+this.scrollbarInset+'px)');
-      this.elVThumb.style.height = this.height * barHeight / contentHeight + 'px';
-      setTransform(this.elVThumb, 'translate(0,'+Math.round(Math.min(1 - this.height / contentHeight, this.scrollY / contentHeight) * barHeight)+'px)');
-    }
+    this.elContents.style.width = w+'px';
+    this.elContents.style.height = h+'px';
+    this.updateVisibility();
   };
 
   Workspace.prototype.cleanUp = function() {
@@ -2547,11 +2483,11 @@ function Visual(options) {
     scripts.sort(function(a, b) {
       return a.y - b.y;
     });
-    var y = this.paddingY;
+    var y = this.paddingTop;
     var length = scripts.length;
     for (var i = 0; i < length; i++) {
       var s = scripts[i];
-      s.moveTo(this.paddingX, y);
+      s.moveTo(this.paddingLeft, y);
       y += s.height + this.spacing;
     }
     this.layout();
@@ -2567,8 +2503,8 @@ function Visual(options) {
   function Palette(host) {
     Workspace.call(this, host);
 
-    this.cx = this.paddingX;
-    this.cy = this.paddingY;
+    this.cx = this.paddingLeft;
+    this.cy = this.paddingTop;
     this.lineHeight = 0;
     this.line = [];
   }
@@ -2592,10 +2528,10 @@ function Visual(options) {
   Palette.prototype.constructor = Palette;
 
   Palette.prototype.isPalette = true;
-  Palette.prototype.paddingX = 10;
-  Palette.prototype.paddingY = 10;
-  Palette.prototype.extraSpaceX = 10;
-  Palette.prototype.extraSpaceY = 10;
+  Palette.prototype.paddingLeft = 10;
+  Palette.prototype.paddingTop = 10;
+  Palette.prototype.paddingRight = 10;
+  Palette.prototype.paddingBottom = 10;
   Palette.prototype.spacing = 7;
   Palette.prototype.spaceSize = 24;
 
@@ -2617,7 +2553,7 @@ function Visual(options) {
       script.layoutChildren();
       script.drawChildren();
       this.lineHeight = Math.max(this.lineHeight, script.ownHeight);
-      this.contentWidth = Math.max(this.contentWidth, this.cx + script.ownWidth + this.extraSpaceX);
+      this.contentWidth = Math.max(this.contentWidth, this.cx + script.ownWidth + this.paddingRight);
       if (script.isInline) {
         this.line.push(script);
         this.cx += script.ownWidth + this.spacing;
@@ -2632,11 +2568,11 @@ function Visual(options) {
     }
 
     if (!script.isInline) {
-      this.cx = this.paddingX;
+      this.cx = this.paddingLeft;
       this.lineHeight = 0;
       this.line = [];
     }
-    this.contentHeight = this.cy + this.lineHeight + this.extraSpaceY;
+    this.contentHeight = this.cy + this.lineHeight + this.paddingBottom;
 
     this.refill();
     return this.dispatch('change');
@@ -2669,8 +2605,8 @@ function Visual(options) {
 
   Palette.prototype.clear = function() {
     Workspace.prototype.clear.call(this);
-    this.cx = this.paddingX;
-    this.cy = this.paddingY;
+    this.cx = this.paddingLeft;
+    this.cy = this.paddingTop;
     this.lineHeight = 0;
     this.line = [];
     this.scrollTo(0, 0);
@@ -2678,8 +2614,8 @@ function Visual(options) {
   };
 
   Palette.prototype.layout = function() {
-    var px = this.paddingX;
-    var py = this.paddingY;
+    var px = this.paddingLeft;
+    var py = this.paddingTop;
     var sp = this.spacing;
 
     var y = py;
@@ -2726,8 +2662,8 @@ function Visual(options) {
     this.cx = x;
     this.cy = y;
 
-    this.contentHeight = y + lh + this.extraSpaceY;
-    this.contentWidth = w + this.extraSpaceX;
+    this.contentHeight = y + lh + this.paddingBottom;
+    this.contentWidth = w + this.paddingRight;
     this.refill();
   };
 

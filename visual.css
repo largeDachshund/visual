@@ -35,12 +35,31 @@
 .Visual-workspace {
   position: relative;
   cursor: default;
-  overflow: hidden;
+  overflow: auto;
 }
 
 body.Visual-workspace {
   height: 100%;
   margin: 0;
+}
+
+.Visual-workspace::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.Visual-workspace::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+.Visual-workspace::-webkit-scrollbar-thumb:hover {
+  background-color: #777;
+}
+.Visual-workspace::-webkit-scrollbar-thumb:active {
+  background-color: #666;
+}
+.Visual-workspace::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .Visual-feedback {
@@ -52,30 +71,6 @@ body.Visual-workspace {
 .Visual-dragging {
   position: fixed;
   z-index: 10001;
-}
-
-/* Scroll bar */
-
-.Visual-scroll-bar,
-.Visual-scroll-thumb {
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: rgba(200, 200, 200, .7);
-  border-radius: 1000px;
-}
-
-.Visual-scroll-bar-hidden {
-  opacity: 0;
-  -webkit-transition: opacity .5s;
-  -moz-transition: opacity .5s;
-  -ms-transition: opacity .5s;
-  -o-transition: opacity .5s;
-  transition: opacity .5s;
-}
-
-.Visual-scroll-thumb {
-  background: rgba(70, 70, 70, .7);
 }
 
 /* Script */
