@@ -175,7 +175,7 @@ function Visual(options) {
     if (this.x === x && this.y === y) return;
     this.x = x;
     this.y = y;
-    setTransform(this.el, 'translate('+x+'px,'+y+'px)');
+    setTransform(this.el, 'translate('+(x|0)+'px,'+(y|0)+'px)');
     return this;
   }
 
@@ -184,7 +184,7 @@ function Visual(options) {
     this.x = x;
     this.y = y;
     this.__scale = this._scale;
-    setTransform(this.el, 'translate('+(x * this._scale)+'px,'+(y * this._scale)+'px)');
+    setTransform(this.el, 'translate('+(x * this._scale | 0)+'px,'+(y * this._scale | 0)+'px)');
     return this;
   }
 
