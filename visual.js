@@ -2361,7 +2361,7 @@ function Visual(options) {
     y /= this._scale;
     var sx = this.scrollX / this._scale;
     var sy = this.scrollY / this._scale;
-    if (x < sx || y < sy || x >= sx + this.width / this.scale || y >= sy + this.height / this.scale) return null;
+    if (x < sx || y < sy || x >= sx + this.width / this._scale || y >= sy + this.height / this._scale) return null;
     var scripts = this.scripts;
     for (var i = scripts.length; i--;) {
       var script = scripts[i];
