@@ -1189,6 +1189,7 @@ function Visual(options) {
   Arg.prototype.y = 0;
   Arg.prototype.dirty = true;
   Arg.prototype.graphicsDirty = true;
+  Arg.prototype._value = '';
 
   Arg.prototype.insetColor = 'rgba(0, 0, 0, .1)';
   Arg.prototype.fieldPadding = 4;
