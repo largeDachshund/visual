@@ -2337,7 +2337,7 @@ function Visual(options) {
 
     var i = this.scripts.indexOf(script);
     this.scripts.splice(i, 1);
-    this.elContents.removeChild(script.el);
+    if (!script.isSpace) this.elContents.removeChild(script.el);
     this.layout();
 
     return this.dispatch('change');
