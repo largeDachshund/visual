@@ -89,6 +89,15 @@ function Visual(options) {
     if (o.resize) o.resize();
   }
 
+
+  function eventEmitter(c) {
+    c.prototype.dispatch = dispatch;
+    c.prototype.on = addListener;
+    c.prototype.once = addListenerOnce;
+    c.prototype.removeListener = removeListener;
+    c.prototype.removeAllListeners = removeAllListeners;
+  }
+
   function dispatch(event, object) {
     if (!object) object = {};
     object.type = event;
@@ -145,6 +154,7 @@ function Visual(options) {
     this.listeners[event] = null;
     return this;
   }
+
 
   function layout() {
     if (!this.parent) return;
@@ -2494,11 +2504,7 @@ function Visual(options) {
     this.layout();
   };
 
-  Workspace.prototype.dispatch = dispatch;
-  Workspace.prototype.on = addListener;
-  Workspace.prototype.once = addListenerOnce;
-  Workspace.prototype.removeListener = removeListener;
-  Workspace.prototype.removeAllListeners = removeAllListeners;
+  eventEmitter(Workspace);
 
 
   function Palette(host) {
@@ -3826,6 +3832,7 @@ function Visual(options) {
     util: {
       metricsContainer: metricsContainer,
       format: format,
+      eventEmitter: eventEmitter,
       obsoleteBlock: obsoleteBlock,
       createMetrics: createMetrics,
       scrollbarWidth: scrollbarWidth,
