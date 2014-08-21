@@ -73,6 +73,10 @@ function Visual(options) {
     return o.el;
   }
 
+  function toJSON(o) {
+    return o.toJSON();
+  }
+
   function layoutChildren(o) {
     o.layoutChildren();
   }
@@ -810,7 +814,7 @@ function Visual(options) {
   };
 
   Block.prototype.toJSON = function() {
-    return [this.name].concat(this.args);
+    return [this.name].concat(this.args.map(toJSON));
   };
 
   Block.prototype.objectFromPoint = function(x, y) {
@@ -1920,7 +1924,7 @@ function Visual(options) {
   };
 
   Script.prototype.toJSON = function() {
-    return !this.parent || this.parent.isWorkspace ? [this.x, this.y, this.blocks] : this.blocks;
+    return !this.parent || this.parent.isWorkspace ? [this.x, this.y, this.blocks.map(toJSON)] : this.blocks.map(toJSON);
   };
 
   Script.prototype.objectFromPoint = function(x, y) {
