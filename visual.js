@@ -1335,7 +1335,7 @@ function Visual(options) {
   };
 
   Arg.prototype.keyPress = function(e) {
-    if (e.charCode === 0x2d || e.charCode === 0x2e || e.charCode >= 0x30 && e.charCode <= 0x39 || e.charCode === 0x45 || e.charCode === 0x65) return;
+    if (e.charCode === 0x2d || e.charCode === 0x2e || e.charCode >= 0x30 && e.charCode <= 0x39 || e.charCode === 0x45 || e.charCode === 0x65 || e.charCode < 0x20 || e.metaKey || e.ctrlKey) return;
     e.preventDefault();
   };
 
