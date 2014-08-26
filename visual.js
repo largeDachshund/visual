@@ -1379,6 +1379,7 @@ function Visual(options) {
         menu.withAction(setValue, this).showAt(pos.x, pos.y + this.height * this._scale, this.app);
       }
     } else if (this.isTextArg) {
+      this.field.select();
       this.field.setSelectionRange(0, this.field.value.length);
     }
   };
