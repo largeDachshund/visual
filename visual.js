@@ -391,7 +391,7 @@ function Visual(options) {
       if (hasOwnProperty.call(stringCache, text)) {
         return stringCache[text];
       }
-      node.data = text + '\u200C';
+      node.data = text + '\u200B';
       return stringCache[text] = {
         width: field.offsetWidth,
         height: field.offsetHeight
