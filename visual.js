@@ -3573,6 +3573,7 @@ function Visual(options) {
   Menu.prototype.y = 0;
 
   Menu.prototype.padding = 4;
+  Menu.prototype.allowTyping = true;
 
   def(Menu.prototype, 'app', {get: getApp});
 
@@ -3712,7 +3713,9 @@ function Visual(options) {
     c.style.maxWidth = (window.innerWidth - p * 2)+'px';
     c.style.maxHeight = (window.innerHeight - p * 2)+'px';
     this.moveTo(Math.max(p, Math.min(window.innerWidth - w - p, x)), Math.max(p, Math.min(window.innerHeight - h - p, y)));
-    this.field.focus();
+    if (this.allowTyping) {
+      this.field.focus();
+    }
   };
 
   Menu.prototype.updateMouse = function(e) {
