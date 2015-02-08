@@ -3559,6 +3559,7 @@ function Visual(options) {
     this.cancelTyping = this.cancelTyping.bind(this);
 
     this.el.addEventListener('mouseup', this.mouseUp.bind(this), true);
+    this.el.addEventListener('touchend', this.mouseUp.bind(this), true);
     this.change = this.change.bind(this);
     this.field.addEventListener('keydown', this.keyDown.bind(this));
     this.field.addEventListener('input', this.input.bind(this));
@@ -3724,6 +3725,10 @@ function Visual(options) {
       return;
     }
     var t = e.target;
+    if (e.changedTouches) {
+      var touch = e.changedTouches[0];
+      t = document.elementFromPoint(touch.clientX, touch.clientY);
+    }
     while (t) {
       if (t.parentNode === this.el && t.dataset.index) {
         this.select(t.dataset.index);
