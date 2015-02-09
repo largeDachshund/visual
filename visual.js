@@ -1286,6 +1286,7 @@ function Visual(options) {
             this.field.addEventListener('keypress', this.keyPress.bind(this));
           }
           this.field.addEventListener('input', this.change.bind(this));
+          this.field.addEventListener('keydown', this.keyDown.bind(this));
           this.isTextArg = true;
           break;
         case 'm':
@@ -1337,6 +1338,36 @@ function Visual(options) {
   Arg.prototype.keyPress = function(e) {
     if (e.charCode === 0x2d || e.charCode === 0x2e || e.charCode >= 0x30 && e.charCode <= 0x39 || e.charCode === 0x45 || e.charCode === 0x65 || e.charCode < 0x20 || e.metaKey || e.ctrlKey) return;
     e.preventDefault();
+  };
+
+  var NUM_RE = /[+-]?\d+(?:\.\d+)?/g;
+  Arg.prototype.keyDown = function(e) {
+    if (e.keyCode === 38 || e.keyCode === 40) {
+      var delta = e.keyCode === 38 ? 1 : -1;
+      if (e.shiftKey) delta *= 10;
+      else if (e.altKey) delta /= 10;
+
+      var v = this.field.value;
+      var ss = this.field.selectionStart;
+
+      var x;
+      NUM_RE.lastIndex = 0;
+      while (x = NUM_RE.exec(v)) {
+        if (x.index > ss) break;
+        if (ss <= NUM_RE.lastIndex) {
+
+          var nv = "" + Math.round((+x[0] + delta) * 1000000) / 1000000;
+          this.field.value = this._value = v.slice(0, x.index) + nv + v.slice(NUM_RE.lastIndex);
+          this.field.selectionStart = x.index;
+          this.field.selectionEnd = x.index + nv.length;
+          // this.field.selectionStart = this.field.selectionEnd = x.index + Math.max(0, ss - x.index + nv.length - x[0].length);
+
+          e.preventDefault();
+          this.layout();
+          break;
+        }
+      }
+    }
   };
 
   def(Arg.prototype, 'app', {get: getApp});
