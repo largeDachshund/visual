@@ -1407,6 +1407,7 @@ function Visual(options) {
       var menu = options.getMenu(this);
       if (menu) {
         pos = pos || this.worldPosition;
+        menu.ignoreMouse = false;
         menu.withAction(setValue, this).showAt(pos.x, pos.y + this.height * this._scale, this.app);
       }
     } else if (this.isTextArg) {
