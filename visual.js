@@ -2505,6 +2505,7 @@ function Visual(options) {
     this.scripts.forEach(function(s) {
       if (s.setScale) s.setScale(value);
     });
+    this.refill();
     return this;
   };
 
@@ -2515,8 +2516,8 @@ function Visual(options) {
   };
 
   Workspace.prototype.refill = function() {
-    var w = this.contentWidth;
-    var h = this.contentHeight;
+    var w = this.contentWidth*this._scale;
+    var h = this.contentHeight*this._scale;
     if (!this.isPalette) {
       w = Math.max(w, this.scrollX + this.width + this.paddingRight);
       h = Math.max(h, this.scrollY + this.height + this.paddingBottom);
