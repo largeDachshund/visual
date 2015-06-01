@@ -1507,6 +1507,7 @@ function Visual(options) {
 
   Arg.prototype.arrowWidth = 7;
   Arg.prototype.arrowHeight = 4;
+  Arg.prototype.arrowColor = 'rgba(0, 0, 0, .6)';
   Arg.prototype.drawArrow = function() {
     var w = this.arrowWidth * this._scale;
     var h = this.arrowHeight * this._scale;
@@ -1514,7 +1515,7 @@ function Visual(options) {
     canvas.width = w;
     canvas.height = h;
     var context = canvas.getContext('2d');
-    context.fillStyle = 'rgba(0, 0, 0, .6)';
+    context.fillStyle = this.arrowColor;
     context.moveTo(0, 0);
     context.lineTo(w, 0);
     context.lineTo(w/2, h);
